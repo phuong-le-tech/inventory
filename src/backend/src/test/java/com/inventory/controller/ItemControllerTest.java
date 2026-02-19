@@ -27,6 +27,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -88,9 +89,9 @@ class ItemControllerTest {
 
             mockMvc.perform(get("/api/v1/items"))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.content").isArray())
-                    .andExpect(jsonPath("$.content[0].name").value("Test Item"))
-                    .andExpect(jsonPath("$.totalElements").value(1));
+                    .andExpect(jsonPath("$.data.content").isArray())
+                    .andExpect(jsonPath("$.data.content[0].name").value("Test Item"))
+                    .andExpect(jsonPath("$.data.totalElements").value(1));
         }
 
         @Test
@@ -115,13 +116,13 @@ class ItemControllerTest {
         @Test
         @DisplayName("should return item when exists")
         void getItem_existingId_returnsItem() throws Exception {
-            when(itemService.getItemById(testId)).thenReturn(testItem);
+            when(itemService.getItemById(testId)).thenReturn(Optional.of(testItem));
 
             mockMvc.perform(get("/api/v1/items/{id}", testId))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.id").value(testId.toString()))
-                    .andExpect(jsonPath("$.name").value("Test Item"))
-                    .andExpect(jsonPath("$.status").value("TO_PREPARE"));
+                    .andExpect(jsonPath("$.data.id").value(testId.toString()))
+                    .andExpect(jsonPath("$.data.name").value("Test Item"))
+                    .andExpect(jsonPath("$.data.status").value("TO_PREPARE"));
         }
 
         @Test
@@ -129,7 +130,7 @@ class ItemControllerTest {
         void getItem_nonExistingId_returns404() throws Exception {
             UUID nonExistingId = UUID.randomUUID();
             when(itemService.getItemById(nonExistingId))
-                    .thenThrow(new ItemNotFoundException(nonExistingId));
+                    .thenReturn(Optional.empty());
 
             mockMvc.perform(get("/api/v1/items/{id}", nonExistingId))
                     .andExpect(status().isNotFound());
@@ -151,7 +152,7 @@ class ItemControllerTest {
             mockMvc.perform(multipart("/api/v1/items")
                             .param("data", jsonData))
                     .andExpect(status().isCreated())
-                    .andExpect(jsonPath("$.name").value("Test Item"));
+                    .andExpect(jsonPath("$.data.name").value("Test Item"));
         }
 
         @Test
@@ -197,8 +198,8 @@ class ItemControllerTest {
                                 return req;
                             }))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.name").value("Updated Item"))
-                    .andExpect(jsonPath("$.status").value("READY"));
+                    .andExpect(jsonPath("$.data.name").value("Updated Item"))
+                    .andExpect(jsonPath("$.data.status").value("READY"));
         }
     }
 
@@ -242,9 +243,9 @@ class ItemControllerTest {
 
             mockMvc.perform(get("/api/v1/items/stats"))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.totalItems").value(10))
-                    .andExpect(jsonPath("$.countByStatus.TO_PREPARE").value(5))
-                    .andExpect(jsonPath("$.countByCategory.Electronics").value(6));
+                    .andExpect(jsonPath("$.data.totalItems").value(10))
+                    .andExpect(jsonPath("$.data.countByStatus.TO_PREPARE").value(5))
+                    .andExpect(jsonPath("$.data.countByCategory.Electronics").value(6));
         }
     }
 }

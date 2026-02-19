@@ -48,7 +48,7 @@ public class AdminController {
     }
 
     @PostMapping("/users")
-    public ResponseEntity<UserResponse> createUser(@Valid @RequestBody CreateUserRequest request) {
+    public ResponseEntity<UserResponse> createUser(@Valid @RequestBody @NonNull CreateUserRequest request) {
         User savedUser = userService.createUser(request);
         return ResponseEntity.status(HttpStatus.CREATED)
             .body(UserResponse.fromEntity(savedUser));

@@ -25,7 +25,7 @@ export function LoginPage() {
     } catch (err: unknown) {
       const errorMessage = err instanceof Error
         ? err.message
-        : (err as { response?: { data?: { error?: string } } })?.response?.data?.error || 'Invalid email or password';
+        : (err as { response?: { data?: { error?: { message?: string } } } })?.response?.data?.error?.message || 'Invalid email or password';
       setError(errorMessage);
     } finally {
       setLoading(false);

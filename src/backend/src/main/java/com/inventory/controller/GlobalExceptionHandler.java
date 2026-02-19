@@ -1,5 +1,6 @@
 package com.inventory.controller;
 
+import com.inventory.dto.response.ApiErrorResponse;
 import com.inventory.exception.CustomFieldValidationException;
 import com.inventory.exception.FileValidationException;
 import com.inventory.exception.ItemListNotFoundException;
@@ -12,14 +13,10 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.lang.NonNull;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-
-import java.io.PrintWriter;
-import java.io.StringWriter;
-import java.util.HashMap;
-import java.util.Map;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -32,87 +29,66 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(ItemNotFoundException.class)
-    public ResponseEntity<Map<String, String>> handleItemNotFound(ItemNotFoundException e) {
-        return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .body(Map.of("error", e.getMessage()));
+    public ResponseEntity<ApiErrorResponse> handleItemNotFound(ItemNotFoundException e) {
+        return buildErrorResponse(HttpStatus.NOT_FOUND, e.getMessage());
     }
 
     @ExceptionHandler(ItemListNotFoundException.class)
-    public ResponseEntity<Map<String, String>> handleItemListNotFound(ItemListNotFoundException e) {
-        return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .body(Map.of("error", e.getMessage()));
+    public ResponseEntity<ApiErrorResponse> handleItemListNotFound(ItemListNotFoundException e) {
+        return buildErrorResponse(HttpStatus.NOT_FOUND, e.getMessage());
     }
 
     @ExceptionHandler(UserNotFoundException.class)
-    public ResponseEntity<Map<String, String>> handleUserNotFound(UserNotFoundException e) {
-        return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .body(Map.of("error", e.getMessage()));
+    public ResponseEntity<ApiErrorResponse> handleUserNotFound(UserNotFoundException e) {
+        return buildErrorResponse(HttpStatus.NOT_FOUND, e.getMessage());
     }
 
     @ExceptionHandler(UserAlreadyExistsException.class)
-    public ResponseEntity<Map<String, String>> handleUserAlreadyExists(UserAlreadyExistsException e) {
-        return ResponseEntity.status(HttpStatus.CONFLICT)
-                .body(Map.of("error", e.getMessage()));
+    public ResponseEntity<ApiErrorResponse> handleUserAlreadyExists(UserAlreadyExistsException e) {
+        return buildErrorResponse(HttpStatus.CONFLICT, e.getMessage());
     }
 
     @ExceptionHandler(CustomFieldValidationException.class)
-    public ResponseEntity<Map<String, String>> handleCustomFieldValidation(CustomFieldValidationException e) {
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(Map.of("error", e.getMessage()));
+    public ResponseEntity<ApiErrorResponse> handleCustomFieldValidation(CustomFieldValidationException e) {
+        return buildErrorResponse(HttpStatus.BAD_REQUEST, e.getMessage());
     }
 
     @ExceptionHandler(FileValidationException.class)
-    public ResponseEntity<Map<String, String>> handleFileValidation(FileValidationException e) {
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(Map.of("error", e.getMessage()));
+    public ResponseEntity<ApiErrorResponse> handleFileValidation(FileValidationException e) {
+        return buildErrorResponse(HttpStatus.BAD_REQUEST, e.getMessage());
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<Map<String, String>> handleValidation(MethodArgumentNotValidException e) {
+    public ResponseEntity<ApiErrorResponse> handleValidation(MethodArgumentNotValidException e) {
         String message = e.getBindingResult().getFieldErrors().stream()
                 .map(error -> error.getField() + ": " + error.getDefaultMessage())
                 .findFirst()
                 .orElse("Validation failed");
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(Map.of("error", message));
+        return buildErrorResponse(HttpStatus.BAD_REQUEST, message);
     }
 
     @ExceptionHandler(UnauthorizedException.class)
-    public ResponseEntity<Map<String, String>> handleUnauthorized(UnauthorizedException e) {
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                .body(Map.of("error", e.getMessage()));
+    public ResponseEntity<ApiErrorResponse> handleUnauthorized(UnauthorizedException e) {
+        return buildErrorResponse(HttpStatus.UNAUTHORIZED, e.getMessage());
     }
 
     @ExceptionHandler(AccessDeniedException.class)
-    public ResponseEntity<Map<String, String>> handleAccessDenied(AccessDeniedException e) {
-        return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                .body(Map.of("error", "Access denied"));
+    public ResponseEntity<ApiErrorResponse> handleAccessDenied(AccessDeniedException e) {
+        return buildErrorResponse(HttpStatus.FORBIDDEN, "Access denied");
     }
 
     @ExceptionHandler(BadCredentialsException.class)
-    public ResponseEntity<Map<String, String>> handleBadCredentials(BadCredentialsException e) {
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                .body(Map.of("error", "Invalid email or password"));
+    public ResponseEntity<ApiErrorResponse> handleBadCredentials(BadCredentialsException e) {
+        return buildErrorResponse(HttpStatus.UNAUTHORIZED, "Invalid email or password");
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<Map<String, Object>> handleException(Exception e) {
-        Map<String, Object> body = new HashMap<>();
-
-        if (isDevMode()) {
-            body.put("error", e.getMessage());
-            body.put("exception", e.getClass().getName());
-            body.put("stackTrace", getStackTrace(e));
-        } else {
-            body.put("error", "An unexpected error occurred");
-        }
-
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(body);
+    public ResponseEntity<ApiErrorResponse> handleException(Exception e) {
+        String message = isDevMode() ? e.getMessage() : "An unexpected error occurred";
+        return buildErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR, message);
     }
 
-    private String getStackTrace(Exception e) {
-        StringWriter sw = new StringWriter();
-        e.printStackTrace(new PrintWriter(sw));
-        return sw.toString();
+    private ResponseEntity<ApiErrorResponse> buildErrorResponse(@NonNull HttpStatus status, String message) {
+        return ResponseEntity.status(status).body(ApiErrorResponse.of(status.value(), message));
     }
 }

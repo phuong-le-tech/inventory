@@ -10,6 +10,7 @@ import com.inventory.service.IUserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.lang.NonNull;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,12 +27,12 @@ public class UserServiceImpl implements IUserService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<User> getAllUsers(Pageable pageable) {
+    public Page<User> getAllUsers(@NonNull Pageable pageable) {
         return userRepository.findAll(pageable);
     }
 
     @Override
-    public User createUser(CreateUserRequest request) {
+    public User createUser(@NonNull CreateUserRequest request) {
         if (userRepository.existsByEmail(request.email())) {
             throw new UserAlreadyExistsException(request.email());
         }
@@ -45,7 +46,7 @@ public class UserServiceImpl implements IUserService {
     }
 
     @Override
-    public void deleteUser(UUID id) {
+    public void deleteUser(@NonNull UUID id) {
         if (!userRepository.existsById(id)) {
             throw new UserNotFoundException(id);
         }
@@ -53,7 +54,7 @@ public class UserServiceImpl implements IUserService {
     }
 
     @Override
-    public User updateUserRole(UUID id, Role role) {
+    public User updateUserRole(@NonNull UUID id, @NonNull Role role) {
         User user = userRepository.findById(id)
             .orElseThrow(() -> new UserNotFoundException(id));
 
@@ -63,14 +64,14 @@ public class UserServiceImpl implements IUserService {
 
     @Override
     @Transactional(readOnly = true)
-    public User getUserById(UUID id) {
+    public User getUserById(@NonNull UUID id) {
         return userRepository.findById(id)
             .orElseThrow(() -> new UserNotFoundException(id));
     }
 
     @Override
     @Transactional(readOnly = true)
-    public boolean existsByEmail(String email) {
+    public boolean existsByEmail(@NonNull String email) {
         return userRepository.existsByEmail(email);
     }
 }

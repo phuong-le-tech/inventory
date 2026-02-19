@@ -12,6 +12,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.lang.NonNull;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -45,13 +46,13 @@ public class ItemListController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ItemListResponse> getListById(@PathVariable UUID id) {
+    public ResponseEntity<ItemListResponse> getListById(@PathVariable @NonNull UUID id) {
         ItemList itemList = itemListService.getListById(id);
         return ResponseEntity.ok(ItemListResponse.fromEntity(itemList));
     }
 
     @PostMapping
-    public ResponseEntity<ItemListResponse> createList(@Valid @RequestBody ItemListRequest request) {
+    public ResponseEntity<ItemListResponse> createList(@Valid @RequestBody @NonNull ItemListRequest request) {
         ItemList itemList = itemListService.createList(request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ItemListResponse.fromEntity(itemList));
@@ -59,15 +60,15 @@ public class ItemListController {
 
     @PatchMapping("/{id}")
     public ResponseEntity<ItemListResponse> updateList(
-            @PathVariable UUID id,
-            @Valid @RequestBody ItemListRequest request
+            @PathVariable @NonNull UUID id,
+            @Valid @RequestBody @NonNull ItemListRequest request
     ) {
         ItemList itemList = itemListService.updateList(id, request);
         return ResponseEntity.ok(ItemListResponse.fromEntity(itemList));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteList(@PathVariable UUID id) {
+    public ResponseEntity<Void> deleteList(@PathVariable @NonNull UUID id) {
         itemListService.deleteList(id);
         return ResponseEntity.noContent().build();
     }

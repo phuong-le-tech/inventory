@@ -6,6 +6,7 @@ import com.inventory.dto.request.ItemSearchCriteria;
 import com.inventory.dto.response.DashboardStats;
 import com.inventory.dto.response.ItemResponse;
 import com.inventory.dto.response.PageResponse;
+import com.inventory.exception.ItemNotFoundException;
 import com.inventory.model.Item;
 import com.inventory.service.IItemService;
 import org.springframework.data.domain.Page;
@@ -20,6 +21,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.util.Objects;
 import java.util.UUID;
 
 @RestController
@@ -54,18 +56,22 @@ public class ItemController {
     }
 
     @GetMapping("/{id}")
-    public ItemResponse getItem(@PathVariable @NonNull UUID id) {
-        return ItemResponse.fromEntity(itemService.getItemById(id));
+    public ResponseEntity<ItemResponse> getItem(@PathVariable @NonNull UUID id) {
+        return itemService.getItemById(id)
+                .map(item -> ResponseEntity.ok(ItemResponse.fromEntity(item)))
+                .orElseThrow(() -> new ItemNotFoundException(id));
     }
 
     @GetMapping("/{id}/image")
     public ResponseEntity<byte[]> getItemImage(@PathVariable @NonNull UUID id) {
-        Item item = itemService.getItemById(id);
+        Item item = itemService.getItemById(id)
+                .orElseThrow(() -> new ItemNotFoundException(id));
         if (item.getImageData() == null || item.getImageData().length == 0) {
             return ResponseEntity.notFound().build();
         }
+
         return ResponseEntity.ok()
-                .contentType(MediaType.parseMediaType(item.getContentType()))
+                .contentType(MediaType.parseMediaType(Objects.requireNonNull(item.getContentType(), "Content type not found")))
                 .body(item.getImageData());
     }
 
@@ -74,6 +80,7 @@ public class ItemController {
             @RequestParam("data") @NonNull String data,
             @RequestParam(value = "image", required = false) MultipartFile image) throws IOException {
         ItemRequest request = objectMapper.readValue(data, ItemRequest.class);
+        Objects.requireNonNull(request, "Item request data must not be null");
         Item item = itemService.createItem(request, image);
         return ResponseEntity.status(HttpStatus.CREATED).body(ItemResponse.fromEntity(item));
     }

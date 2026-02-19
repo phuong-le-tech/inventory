@@ -87,19 +87,19 @@ class ItemControllerIntegrationTest {
             MvcResult createResult = mockMvc.perform(multipart("/api/v1/items")
                             .param("data", jsonData))
                     .andExpect(status().isCreated())
-                    .andExpect(jsonPath("$.name").value("Integration Test Item"))
-                    .andExpect(jsonPath("$.itemListId").value(testList.getId().toString()))
-                    .andExpect(jsonPath("$.status").value("TO_PREPARE"))
-                    .andExpect(jsonPath("$.stock").value(5))
+                    .andExpect(jsonPath("$.data.name").value("Integration Test Item"))
+                    .andExpect(jsonPath("$.data.itemListId").value(testList.getId().toString()))
+                    .andExpect(jsonPath("$.data.status").value("TO_PREPARE"))
+                    .andExpect(jsonPath("$.data.stock").value(5))
                     .andReturn();
 
             String responseJson = createResult.getResponse().getContentAsString();
-            String itemId = objectMapper.readTree(responseJson).get("id").asText();
+            String itemId = objectMapper.readTree(responseJson).get("data").get("id").asText();
 
             mockMvc.perform(get("/api/v1/items/{id}", itemId))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.id").value(itemId))
-                    .andExpect(jsonPath("$.name").value("Integration Test Item"));
+                    .andExpect(jsonPath("$.data.id").value(itemId))
+                    .andExpect(jsonPath("$.data.name").value("Integration Test Item"));
 
             assertThat(itemRepository.count()).isEqualTo(1);
         }
@@ -117,11 +117,11 @@ class ItemControllerIntegrationTest {
                             .file(imagePart)
                             .param("data", jsonData))
                     .andExpect(status().isCreated())
-                    .andExpect(jsonPath("$.hasImage").value(true))
-                    .andExpect(jsonPath("$.contentType").value("image/jpeg"))
+                    .andExpect(jsonPath("$.data.hasImage").value(true))
+                    .andExpect(jsonPath("$.data.contentType").value("image/jpeg"))
                     .andReturn();
 
-            String itemId = objectMapper.readTree(result.getResponse().getContentAsString()).get("id").asText();
+            String itemId = objectMapper.readTree(result.getResponse().getContentAsString()).get("data").get("id").asText();
             Item savedItem = itemRepository.findById(UUID.fromString(itemId)).orElseThrow();
             assertThat(savedItem.getImageData()).isNotNull();
         }
@@ -146,9 +146,9 @@ class ItemControllerIntegrationTest {
                                 return req;
                             }))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.name").value("Updated Name"))
-                    .andExpect(jsonPath("$.status").value("READY"))
-                    .andExpect(jsonPath("$.stock").value(15));
+                    .andExpect(jsonPath("$.data.name").value("Updated Name"))
+                    .andExpect(jsonPath("$.data.status").value("READY"))
+                    .andExpect(jsonPath("$.data.stock").value(15));
 
             Item updatedItem = itemRepository.findById(item.getId()).orElseThrow();
             assertThat(updatedItem.getName()).isEqualTo("Updated Name");
@@ -198,8 +198,8 @@ class ItemControllerIntegrationTest {
             mockMvc.perform(get("/api/v1/items")
                             .param("status", "TO_PREPARE"))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.totalElements").value(2))
-                    .andExpect(jsonPath("$.content[0].status").value("TO_PREPARE"));
+                    .andExpect(jsonPath("$.data.totalElements").value(2))
+                    .andExpect(jsonPath("$.data.content[0].status").value("TO_PREPARE"));
         }
 
         @Test
@@ -218,7 +218,7 @@ class ItemControllerIntegrationTest {
             mockMvc.perform(get("/api/v1/items")
                             .param("itemListId", testList.getId().toString()))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.totalElements").value(2));
+                    .andExpect(jsonPath("$.data.totalElements").value(2));
         }
 
         @Test
@@ -231,8 +231,8 @@ class ItemControllerIntegrationTest {
             mockMvc.perform(get("/api/v1/items")
                             .param("search", "Laptop"))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.totalElements").value(1))
-                    .andExpect(jsonPath("$.content[0].name").value("Laptop"));
+                    .andExpect(jsonPath("$.data.totalElements").value(1))
+                    .andExpect(jsonPath("$.data.content[0].name").value("Laptop"));
         }
     }
 
@@ -256,12 +256,12 @@ class ItemControllerIntegrationTest {
 
             mockMvc.perform(get("/api/v1/items/stats"))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.totalItems").value(4))
-                    .andExpect(jsonPath("$.countByStatus.TO_PREPARE").value(2))
-                    .andExpect(jsonPath("$.countByStatus.READY").value(1))
-                    .andExpect(jsonPath("$.countByStatus.PENDING").value(1))
-                    .andExpect(jsonPath("$.countByCategory.Electronics").value(2))
-                    .andExpect(jsonPath("$.countByCategory.Clothing").value(2));
+                    .andExpect(jsonPath("$.data.totalItems").value(4))
+                    .andExpect(jsonPath("$.data.countByStatus.TO_PREPARE").value(2))
+                    .andExpect(jsonPath("$.data.countByStatus.READY").value(1))
+                    .andExpect(jsonPath("$.data.countByStatus.PENDING").value(1))
+                    .andExpect(jsonPath("$.data.countByCategory.Electronics").value(2))
+                    .andExpect(jsonPath("$.data.countByCategory.Clothing").value(2));
         }
 
         @Test
@@ -269,7 +269,7 @@ class ItemControllerIntegrationTest {
         void dashboardStats_emptyDatabase() throws Exception {
             mockMvc.perform(get("/api/v1/items/stats"))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.totalItems").value(0));
+                    .andExpect(jsonPath("$.data.totalItems").value(0));
         }
     }
 

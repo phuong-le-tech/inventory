@@ -7,9 +7,14 @@ const api = axios.create({
   withCredentials: true,
 });
 
-// Add 401 interceptor to redirect to login
+// Unwrap Google JSON Style Guide response envelope and redirect on 401
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    if (response.data && typeof response.data === 'object' && 'data' in response.data) {
+      response.data = response.data.data;
+    }
+    return response;
+  },
   (error) => {
     if (error.response?.status === 401 && !window.location.pathname.includes('/login')) {
       window.location.href = '/login';

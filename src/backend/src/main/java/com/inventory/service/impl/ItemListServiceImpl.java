@@ -17,6 +17,7 @@ import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Objects;
 import java.util.UUID;
 
 @Service
@@ -36,7 +37,7 @@ public class ItemListServiceImpl implements IItemListService {
         }
         UUID userId = securityUtils.getCurrentUserId()
                 .orElseThrow(() -> new UnauthorizedException("Not authenticated"));
-        return itemListRepository.findByUserId(userId, pageable);
+        return itemListRepository.findByUserId(Objects.requireNonNull(userId, "User not found"), pageable);
     }
 
     @Override
@@ -48,7 +49,7 @@ public class ItemListServiceImpl implements IItemListService {
         }
         UUID userId = securityUtils.getCurrentUserId()
                 .orElseThrow(() -> new UnauthorizedException("Not authenticated"));
-        return itemListRepository.findByIdAndUserId(id, userId)
+        return itemListRepository.findByIdAndUserId(id, Objects.requireNonNull(userId, "User not found"))
                 .orElseThrow(() -> new ItemListNotFoundException(id));
     }
 
@@ -57,7 +58,8 @@ public class ItemListServiceImpl implements IItemListService {
     public ItemList createList(@NonNull ItemListRequest request) {
         UUID userId = securityUtils.getCurrentUserId()
                 .orElseThrow(() -> new UnauthorizedException("Not authenticated"));
-        User user = userRepository.findById(userId)
+        
+        User user = userRepository.findById(Objects.requireNonNull(userId, "User not found"))
                 .orElseThrow(() -> new UnauthorizedException("User not found"));
 
         customFieldValidator.validateDefinitionNames(request.customFieldDefinitions());
@@ -96,7 +98,7 @@ public class ItemListServiceImpl implements IItemListService {
         }
         UUID userId = securityUtils.getCurrentUserId()
                 .orElseThrow(() -> new UnauthorizedException("Not authenticated"));
-        if (!itemListRepository.existsByIdAndUserId(id, userId)) {
+        if (!itemListRepository.existsByIdAndUserId(id, Objects.requireNonNull(userId, "User not found"))) {
             throw new ItemListNotFoundException(id);
         }
         itemListRepository.deleteById(id);

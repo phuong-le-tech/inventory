@@ -25,6 +25,8 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -56,15 +58,16 @@ public class ItemServiceImpl implements IItemService {
 
     @Override
     @Transactional(readOnly = true)
-    public Item getItemById(@NonNull UUID id) {
-        return itemRepository.findById(id)
-                .orElseThrow(() -> new ItemNotFoundException(id));
+    public Optional<Item> getItemById(@NonNull UUID id) {
+        return itemRepository.findById(id);
     }
 
     @Override
     @Transactional
     public Item createItem(@NonNull ItemRequest request, MultipartFile image) throws IOException {
-        ItemList itemList = itemListRepository.findById(request.itemListId())
+
+        ItemList itemList = itemListRepository.findById(Objects.requireNonNull(request.itemListId(),
+                "Item list ID must not be null"))
                 .orElseThrow(() -> new ItemListNotFoundException(request.itemListId()));
 
         customFieldValidator.validate(itemList.getCustomFieldDefinitions(), request.customFieldValues());
@@ -88,9 +91,11 @@ public class ItemServiceImpl implements IItemService {
     @Override
     @Transactional
     public Item updateItem(@NonNull UUID id, ItemRequest request, MultipartFile image) throws IOException {
-        Item item = getItemById(id);
+        Item item = getItemById(id)
+                .orElseThrow(() -> new ItemNotFoundException(id));
 
-        ItemList itemList = itemListRepository.findById(request.itemListId())
+        ItemList itemList = itemListRepository.findById(Objects.requireNonNull(request.itemListId(),
+                "Item list ID must not be null"))
                 .orElseThrow(() -> new ItemListNotFoundException(request.itemListId()));
 
         customFieldValidator.validate(itemList.getCustomFieldDefinitions(), request.customFieldValues());

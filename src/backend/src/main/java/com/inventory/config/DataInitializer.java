@@ -17,6 +17,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 
 @Component
 @RequiredArgsConstructor
@@ -33,16 +34,16 @@ public class DataInitializer implements CommandLineRunner {
         User admin = userRepository.findByEmail("admin@example.com").orElse(null);
 
         if (admin == null) {
-            admin = userRepository.save(UserFixture.createAdmin(passwordEncoder));
+            admin = userRepository.save(Objects.requireNonNull(UserFixture.createAdmin(passwordEncoder)));
             log.info("Created default admin user: admin@example.com / admin123");
         }
 
-        if (isDevProfile() && itemListRepository.findByUserId(admin.getId(), Pageable.unpaged()).isEmpty()) {
+        if (isDevProfile() && itemListRepository.findByUserId(Objects.requireNonNull(admin.getId(), "Admin not found"), Pageable.unpaged()).isEmpty()) {
             List<ItemList> lists = ItemListFixture.createAll(admin);
             for (ItemList list : lists) {
                 ItemFixture.createItemsFor(list);
             }
-            itemListRepository.saveAll(lists);
+            itemListRepository.saveAll(Objects.requireNonNull(lists, "Lists not found"));
             int totalItems = lists.stream().mapToInt(l -> l.getItems().size()).sum();
             log.info("Seeded {} lists with {} items for admin user", lists.size(), totalItems);
         }

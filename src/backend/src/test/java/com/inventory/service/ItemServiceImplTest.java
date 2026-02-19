@@ -28,6 +28,7 @@ import org.springframework.mock.web.MockMultipartFile;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -84,7 +85,7 @@ class ItemServiceImplTest {
         void getAllItems_returnsPageOfItems() {
             Pageable pageable = PageRequest.of(0, 10);
             ItemSearchCriteria criteria = new ItemSearchCriteria(null, null, null);
-            Page<Item> expectedPage = new PageImpl<>(List.of(testItem));
+            Page<Item> expectedPage = new PageImpl<>(Objects.requireNonNull(List.of(testItem), "List of items not found"));
 
             when(itemRepository.findAll(any(Specification.class), eq(pageable))).thenReturn(expectedPage);
 
@@ -105,11 +106,11 @@ class ItemServiceImplTest {
         void getItemById_existingId_returnsItem() {
             when(itemRepository.findById(testId)).thenReturn(Optional.of(testItem));
 
-            Item result = itemService.getItemById(testId);
+            Optional<Item> result = itemService.getItemById(testId);
 
-            assertThat(result).isNotNull();
-            assertThat(result.getId()).isEqualTo(testId);
-            assertThat(result.getName()).isEqualTo("Test Item");
+            assertThat(result).isPresent();
+            assertThat(result.get().getId()).isEqualTo(testId);
+            assertThat(result.get().getName()).isEqualTo("Test Item");
         }
 
         @Test
@@ -118,8 +119,9 @@ class ItemServiceImplTest {
             UUID nonExistingId = UUID.randomUUID();
             when(itemRepository.findById(nonExistingId)).thenReturn(Optional.empty());
 
-            assertThatThrownBy(() -> itemService.getItemById(nonExistingId))
-                    .isInstanceOf(ItemNotFoundException.class);
+            Optional<Item> result = itemService.getItemById(nonExistingId);
+
+            assertThat(result).isEmpty();
         }
     }
 

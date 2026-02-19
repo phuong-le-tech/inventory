@@ -12,6 +12,7 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.lang.NonNull;
 
 import java.io.IOException;
+import java.util.Optional;
 import java.util.UUID;
 
 @Validated
@@ -20,7 +21,7 @@ public interface IItemService {
     // Read operations
     Page<Item> getAllItems(@NonNull Pageable pageable, @NonNull ItemSearchCriteria criteria);
 
-    Item getItemById(@NonNull UUID id);
+    Optional<Item> getItemById(@NonNull UUID id);
 
     DashboardStats getDashboardStats();
 

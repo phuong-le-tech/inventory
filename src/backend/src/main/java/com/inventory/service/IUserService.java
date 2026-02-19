@@ -5,20 +5,21 @@ import com.inventory.enums.Role;
 import com.inventory.model.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.lang.NonNull;
 
 import java.util.UUID;
 
 public interface IUserService {
 
-    Page<User> getAllUsers(Pageable pageable);
+    Page<User> getAllUsers(@NonNull Pageable pageable);
 
-    User createUser(CreateUserRequest request);
+    User createUser(@NonNull CreateUserRequest request);
 
-    void deleteUser(UUID id);
+    void deleteUser(@NonNull UUID id);
 
-    User updateUserRole(UUID id, Role role);
+    User updateUserRole(@NonNull UUID id, @NonNull Role role);
 
-    User getUserById(UUID id);
+    User getUserById(@NonNull UUID id);
 
-    boolean existsByEmail(String email);
+    boolean existsByEmail(@NonNull String email);
 }
