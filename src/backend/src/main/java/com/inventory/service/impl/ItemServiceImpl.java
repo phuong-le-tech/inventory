@@ -24,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -80,9 +81,10 @@ public class ItemServiceImpl implements IItemService {
         item.setCustomFieldValues(request.customFieldValues());
 
         if (image != null && !image.isEmpty()) {
-            validateImage(image);
-            item.setImageData(image.getBytes());
-            item.setContentType(image.getContentType());
+            byte[] imageBytes = image.getBytes();
+            String detectedType = validateAndDetectContentType(imageBytes);
+            item.setImageData(imageBytes);
+            item.setContentType(detectedType);
         }
 
         return itemRepository.save(item);
@@ -107,9 +109,10 @@ public class ItemServiceImpl implements IItemService {
         item.setCustomFieldValues(request.customFieldValues());
 
         if (image != null && !image.isEmpty()) {
-            validateImage(image);
-            item.setImageData(image.getBytes());
-            item.setContentType(image.getContentType());
+            byte[] imageBytes = image.getBytes();
+            String detectedType = validateAndDetectContentType(imageBytes);
+            item.setImageData(imageBytes);
+            item.setContentType(detectedType);
         }
 
         return itemRepository.save(item);
@@ -141,13 +144,39 @@ public class ItemServiceImpl implements IItemService {
         return new DashboardStats(totalItems, statusCounts, categoryCounts);
     }
 
-    private void validateImage(MultipartFile image) {
-        if (image.getSize() > MAX_FILE_SIZE) {
+    private String validateAndDetectContentType(byte[] data) {
+        if (data.length > MAX_FILE_SIZE) {
             throw new FileValidationException("File size exceeds maximum allowed size of 10MB");
         }
-        String contentType = image.getContentType();
-        if (contentType == null || !ALLOWED_CONTENT_TYPES.contains(contentType)) {
+        String detectedType = detectContentType(data);
+        if (detectedType == null || !ALLOWED_CONTENT_TYPES.contains(detectedType)) {
             throw new FileValidationException("Invalid file type. Allowed types: JPEG, PNG, GIF, WebP");
         }
+        return detectedType;
+    }
+
+    private static final byte[] JPEG_MAGIC = {(byte) 0xFF, (byte) 0xD8, (byte) 0xFF};
+    private static final byte[] PNG_MAGIC = {(byte) 0x89, 0x50, 0x4E, 0x47};
+    private static final byte[] GIF_MAGIC = {0x47, 0x49, 0x46, 0x38};
+    private static final byte[] RIFF_MAGIC = {0x52, 0x49, 0x46, 0x46};
+    private static final byte[] WEBP_MAGIC = {0x57, 0x45, 0x42, 0x50};
+
+    private String detectContentType(byte[] data) {
+        if (data.length < 12) return null;
+        if (startsWith(data, JPEG_MAGIC)) return "image/jpeg";
+        if (startsWith(data, PNG_MAGIC)) return "image/png";
+        if (startsWith(data, GIF_MAGIC)) return "image/gif";
+        if (startsWith(data, RIFF_MAGIC) && Arrays.equals(Arrays.copyOfRange(data, 8, 12), WEBP_MAGIC)) {
+            return "image/webp";
+        }
+        return null;
+    }
+
+    private static boolean startsWith(byte[] data, byte[] prefix) {
+        if (data.length < prefix.length) return false;
+        for (int i = 0; i < prefix.length; i++) {
+            if (data[i] != prefix[i]) return false;
+        }
+        return true;
     }
 }

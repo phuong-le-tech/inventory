@@ -4,7 +4,9 @@ import com.inventory.dto.request.LoginRequest;
 import com.inventory.dto.response.AuthResponse;
 import com.inventory.dto.response.UserResponse;
 import com.inventory.security.CustomUserDetails;
+import com.inventory.security.LoginRateLimiter;
 import com.inventory.service.IAuthService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -18,12 +20,15 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final IAuthService authService;
+    private final LoginRateLimiter loginRateLimiter;
 
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(
             @Valid @RequestBody LoginRequest request,
+            HttpServletRequest httpRequest,
             HttpServletResponse response
     ) {
+        loginRateLimiter.checkRateLimit(httpRequest.getRemoteAddr());
         return ResponseEntity.ok(authService.login(request, response));
     }
 

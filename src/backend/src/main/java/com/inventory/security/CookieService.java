@@ -32,7 +32,7 @@ public class CookieService {
         if (cookieDomain != null && !cookieDomain.isEmpty()) {
             cookie.setDomain(cookieDomain);
         }
-        cookie.setAttribute("SameSite", "Lax");
+        cookie.setAttribute("SameSite", "Strict");
         response.addCookie(cookie);
     }
 

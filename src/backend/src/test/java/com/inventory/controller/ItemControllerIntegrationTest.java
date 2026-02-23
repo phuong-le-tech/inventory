@@ -110,8 +110,10 @@ class ItemControllerIntegrationTest {
             ItemRequest request = new ItemRequest("Item With Image", testList.getId(), ItemStatus.TO_PREPARE, 10, null);
 
             String jsonData = objectMapper.writeValueAsString(request);
+            // JPEG magic bytes (FF D8 FF) followed by dummy data
+            byte[] jpegBytes = new byte[]{(byte) 0xFF, (byte) 0xD8, (byte) 0xFF, (byte) 0xE0, 0, 0, 0, 0, 0, 0, 0, 0};
             MockMultipartFile imagePart = new MockMultipartFile(
-                    "image", "test.jpg", "image/jpeg", "fake image content".getBytes());
+                    "image", "test.jpg", "image/jpeg", jpegBytes);
 
             MvcResult result = mockMvc.perform(multipart("/api/v1/items")
                             .file(imagePart)

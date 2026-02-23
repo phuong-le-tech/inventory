@@ -19,6 +19,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 @RestController
@@ -26,6 +27,8 @@ import java.util.UUID;
 @RequiredArgsConstructor
 @PreAuthorize("hasRole('ADMIN')")
 public class AdminController {
+
+    private static final Set<String> ALLOWED_SORT_FIELDS = Set.of("createdAt", "email", "role");
 
     private final IUserService userService;
 
@@ -36,6 +39,9 @@ public class AdminController {
             @RequestParam(defaultValue = "createdAt") String sortBy,
             @RequestParam(defaultValue = "desc") String sortDir
     ) {
+        if (!ALLOWED_SORT_FIELDS.contains(sortBy)) {
+            sortBy = "createdAt";
+        }
         Sort sort = sortDir.equalsIgnoreCase("asc")
             ? Sort.by(sortBy).ascending()
             : Sort.by(sortBy).descending();

@@ -177,8 +177,10 @@ class ItemServiceImplTest {
         @DisplayName("should store image data when provided")
         void createItem_withImage_storesImageData() throws IOException {
             ItemRequest request = new ItemRequest("New Item", testListId, ItemStatus.TO_PREPARE, 10, null);
+            // JPEG magic bytes (FF D8 FF) followed by dummy data
+            byte[] jpegBytes = new byte[]{(byte) 0xFF, (byte) 0xD8, (byte) 0xFF, (byte) 0xE0, 0, 0, 0, 0, 0, 0, 0, 0};
             MockMultipartFile image = new MockMultipartFile(
-                    "image", "test.jpg", "image/jpeg", "test image content".getBytes());
+                    "image", "test.jpg", "image/jpeg", jpegBytes);
 
             when(itemListRepository.findById(testListId)).thenReturn(Optional.of(testList));
             when(itemRepository.save(any(Item.class))).thenAnswer(invocation -> invocation.getArgument(0));

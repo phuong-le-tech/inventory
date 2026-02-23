@@ -5,10 +5,12 @@ import com.inventory.exception.CustomFieldValidationException;
 import com.inventory.exception.FileValidationException;
 import com.inventory.exception.ItemListNotFoundException;
 import com.inventory.exception.ItemNotFoundException;
+import com.inventory.exception.RateLimitExceededException;
 import com.inventory.exception.UnauthorizedException;
 import com.inventory.exception.UserAlreadyExistsException;
 import com.inventory.exception.UserNotFoundException;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.env.Environment;
+import org.springframework.core.env.Profiles;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.http.HttpStatus;
@@ -21,11 +23,14 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    @Value("${spring.profiles.active:}")
-    private String activeProfile;
+    private final Environment environment;
+
+    public GlobalExceptionHandler(Environment environment) {
+        this.environment = environment;
+    }
 
     private boolean isDevMode() {
-        return "dev".equals(activeProfile) || activeProfile.isEmpty();
+        return environment.acceptsProfiles(Profiles.of("dev"));
     }
 
     @ExceptionHandler(ItemNotFoundException.class)
@@ -80,6 +85,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(BadCredentialsException.class)
     public ResponseEntity<ApiErrorResponse> handleBadCredentials(BadCredentialsException e) {
         return buildErrorResponse(HttpStatus.UNAUTHORIZED, "Invalid email or password");
+    }
+
+    @ExceptionHandler(RateLimitExceededException.class)
+    public ResponseEntity<ApiErrorResponse> handleRateLimit(RateLimitExceededException e) {
+        return buildErrorResponse(HttpStatus.TOO_MANY_REQUESTS, e.getMessage());
     }
 
     @ExceptionHandler(Exception.class)

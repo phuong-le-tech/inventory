@@ -15,11 +15,14 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.lang.NonNull;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Set;
 import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/lists")
 public class ItemListController {
+
+    private static final Set<String> ALLOWED_SORT_FIELDS = Set.of("createdAt", "updatedAt", "name", "category");
 
     private final IItemListService itemListService;
 
@@ -34,6 +37,9 @@ public class ItemListController {
             @RequestParam(defaultValue = "createdAt") String sortBy,
             @RequestParam(defaultValue = "desc") String sortDir
     ) {
+        if (!ALLOWED_SORT_FIELDS.contains(sortBy)) {
+            sortBy = "createdAt";
+        }
         Sort sort = sortDir.equalsIgnoreCase("asc")
                 ? Sort.by(sortBy).ascending()
                 : Sort.by(sortBy).descending();

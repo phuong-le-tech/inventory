@@ -22,11 +22,14 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/items")
 public class ItemController {
+
+    private static final Set<String> ALLOWED_SORT_FIELDS = Set.of("createdAt", "updatedAt", "name", "status", "stock");
 
     private final IItemService itemService;
     private final ObjectMapper objectMapper;
@@ -44,6 +47,9 @@ public class ItemController {
             @RequestParam(defaultValue = "desc") String sortDir,
             @ModelAttribute @NonNull ItemSearchCriteria criteria) {
 
+        if (!ALLOWED_SORT_FIELDS.contains(sortBy)) {
+            sortBy = "createdAt";
+        }
         Sort sort = sortDir.equalsIgnoreCase("asc")
                 ? Sort.by(sortBy).ascending()
                 : Sort.by(sortBy).descending();
