@@ -13,7 +13,10 @@ export function ProtectedRoute({ children, adminOnly = false }: ProtectedRoutePr
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <div role="status" aria-label="Vérification de l'authentification">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-500"></div>
+          <span className="sr-only">Chargement...</span>
+        </div>
       </div>
     );
   }

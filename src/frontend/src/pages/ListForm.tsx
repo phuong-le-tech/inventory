@@ -131,10 +131,11 @@ export default function ListForm() {
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           <div>
-            <label className="block text-xs font-medium text-stone-400 mb-2 uppercase tracking-wider">
+            <label htmlFor="list-name" className="block text-xs font-medium text-stone-400 mb-2 uppercase tracking-wider">
               Nom *
             </label>
             <input
+              id="list-name"
               type="text"
               {...register('name')}
               className={`w-full px-4 py-3 bg-surface-base/50 border rounded-xl text-stone-100 placeholder-stone-500 transition-all duration-200 focus:outline-none focus:ring-2 hover:border-white/[0.12] ${
@@ -153,10 +154,11 @@ export default function ListForm() {
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-stone-400 mb-2 uppercase tracking-wider">
+            <label htmlFor="list-description" className="block text-xs font-medium text-stone-400 mb-2 uppercase tracking-wider">
               Description
             </label>
             <textarea
+              id="list-description"
               {...register('description')}
               rows={3}
               className="w-full px-4 py-3 bg-surface-base/50 border border-white/[0.08] rounded-xl text-stone-100 placeholder-stone-500 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500/40 hover:border-white/[0.12] resize-none"
@@ -165,10 +167,11 @@ export default function ListForm() {
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-stone-400 mb-2 uppercase tracking-wider">
+            <label htmlFor="list-category" className="block text-xs font-medium text-stone-400 mb-2 uppercase tracking-wider">
               Catégorie
             </label>
             <input
+              id="list-category"
               type="text"
               {...register('category')}
               className="w-full px-4 py-3 bg-surface-base/50 border border-white/[0.08] rounded-xl text-stone-100 placeholder-stone-500 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500/40 hover:border-white/[0.12]"
@@ -178,9 +181,9 @@ export default function ListForm() {
 
           {/* Custom Field Definitions */}
           <div>
-            <label className="block text-xs font-medium text-stone-400 mb-3 uppercase tracking-wider">
+            <p className="block text-xs font-medium text-stone-400 mb-3 uppercase tracking-wider">
               Champs personnalisés
-            </label>
+            </p>
 
             {fields.length > 0 && (
               <div className="space-y-3 mb-4">
@@ -193,6 +196,7 @@ export default function ListForm() {
                       <input
                         type="text"
                         {...register(`customFieldDefinitions.${index}.label`)}
+                        aria-label={`Libellé du champ ${index + 1}`}
                         className="w-full px-3 py-2 bg-surface-base/50 border border-white/[0.08] rounded-lg text-stone-100 placeholder-stone-500 text-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500/40"
                         placeholder="Libellé du champ"
                       />
@@ -201,6 +205,7 @@ export default function ListForm() {
                     <div className="w-32">
                       <select
                         {...register(`customFieldDefinitions.${index}.type`)}
+                        aria-label={`Type du champ ${index + 1}`}
                         className="w-full px-3 py-2 bg-surface-base/50 border border-white/[0.08] rounded-lg text-stone-100 text-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500/40"
                       >
                         {FIELD_TYPE_OPTIONS.map((t) => (

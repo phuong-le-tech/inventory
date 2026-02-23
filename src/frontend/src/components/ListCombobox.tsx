@@ -4,6 +4,7 @@ import { listsApi } from '../services/api';
 import { ItemList } from '../types/item';
 
 interface ListComboboxProps {
+  id?: string;
   value: string;
   onChange: (id: string) => void;
   error?: boolean;
@@ -13,7 +14,7 @@ interface ListComboboxProps {
 const DEBOUNCE_MS = 300;
 const RESULTS_SIZE = 10;
 
-export default function ListCombobox({ value, onChange, error = false, disabled = false }: ListComboboxProps) {
+export default function ListCombobox({ id, value, onChange, error = false, disabled = false }: ListComboboxProps) {
   const [inputValue, setInputValue] = useState('');
   const [options, setOptions] = useState<ItemList[]>([]);
   const [isOpen, setIsOpen] = useState(false);
@@ -145,6 +146,7 @@ export default function ListCombobox({ value, onChange, error = false, disabled 
         <Search className="h-4 w-4 text-stone-500 mr-2 flex-shrink-0" />
         <input
           ref={inputRef}
+          id={id}
           type="text"
           role="combobox"
           aria-expanded={isOpen}

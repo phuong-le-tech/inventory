@@ -75,7 +75,7 @@ export default function Dashboard() {
           <div
             key={card.label}
             className="bg-gradient-to-br from-surface-elevated/80 to-surface-card/80 backdrop-blur-xl rounded-2xl border border-white/[0.06] shadow-premium p-6 transition-all duration-300 hover:shadow-premium-hover hover:border-white/[0.1] hover:-translate-y-1 group animate-fade-in-up"
-            style={{ animationDelay: `${index * 75}ms`, animationFillMode: 'backwards' }}
+            style={{ animationDelay: `${index * 60}ms`, animationFillMode: 'backwards' }}
           >
             <div className="flex items-center">
               <div className={`${card.color} ${card.glow} p-3 rounded-xl transition-transform duration-200 group-hover:scale-110`}>

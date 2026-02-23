@@ -1,5 +1,5 @@
 import http from './http';
-import { User, LoginCredentials, AuthResponse, CreateUserRequest } from '../types/auth';
+import { User, LoginCredentials, AuthResponse, CreateUserRequest, Role } from '../types/auth';
 import { PageResponse } from '../types/item';
 
 export const authApi = {
@@ -40,7 +40,7 @@ export const adminApi = {
     await http.delete(`/admin/users/${id}`);
   },
 
-  updateUserRole: async (id: string, role: string): Promise<User> => {
+  updateUserRole: async (id: string, role: Role): Promise<User> => {
     const response = await http.patch<User>(`/admin/users/${id}/role`, { role });
     return response.data;
   },

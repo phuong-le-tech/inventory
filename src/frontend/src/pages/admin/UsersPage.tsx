@@ -7,6 +7,7 @@ import { User } from '../../types/auth';
 import { adminApi } from '../../services/authApi';
 import { useToast } from '../../components/Toast';
 import ConfirmModal from '../../components/ConfirmModal';
+import { getApiErrorStatus } from '../../utils/errorUtils';
 
 export function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
@@ -239,7 +240,7 @@ function CreateUserModal({ onClose, onCreated }: { onClose: () => void; onCreate
       const user = await adminApi.createUser(data);
       onCreated(user);
     } catch (err: unknown) {
-      const status = (err as { response?: { status?: number } })?.response?.status;
+      const status = getApiErrorStatus(err);
       setServerError(
         status === 409
           ? 'Un utilisateur avec cet email existe déjà'

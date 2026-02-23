@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { CustomFieldDefinition } from '../types/item';
+import { STATUS_OPTIONS, type CustomFieldDefinition } from '../types/item';
 
 // ---------------------------------------------------------------------------
 // ListForm schema
@@ -36,7 +36,7 @@ export function createItemSchema(fieldDefs: CustomFieldDefinition[] = []) {
   return z.object({
     name: z.string().min(1, 'Le nom est requis').max(200),
     itemListId: z.string().min(1, 'La liste est requise'),
-    status: z.string(),
+    status: z.enum(STATUS_OPTIONS),
     stock: z.number().int().min(0, 'Le stock ne peut pas être négatif'),
     customFieldValues: z
       .record(z.string(), z.unknown())

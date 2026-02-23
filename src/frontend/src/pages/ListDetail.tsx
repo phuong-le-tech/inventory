@@ -3,7 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { ArrowLeft, Plus, Pencil, Trash2, Package, List, ChevronLeft, ChevronRight } from 'lucide-react';
 import axios from 'axios';
 import { listsApi, itemsApi } from '../services/api';
-import { ItemList, Item, formatStatus, STATUS_OPTIONS, STATUS_LABELS, getItemImageUrl, formatCustomFieldValue } from '../types/item';
+import { ItemList, Item, ItemStatus, formatStatus, STATUS_OPTIONS, STATUS_LABELS, getItemImageUrl, formatCustomFieldValue } from '../types/item';
 import { SkeletonCard, SkeletonText, Skeleton } from '../components/Skeleton';
 import { useToast } from '../components/Toast';
 import ConfirmModal from '../components/ConfirmModal';
@@ -29,7 +29,7 @@ export default function ListDetail() {
 
   const [deletingItemId, setDeletingItemId] = useState<string | null>(null);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
-  const [statusFilter, setStatusFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState<ItemStatus | ''>('');
 
   // Effect 1: load list metadata once on mount
   useEffect(() => {
@@ -101,7 +101,7 @@ export default function ListDetail() {
   }, [id, statusFilter, itemPage, itemsReloadKey, showToast]);
 
   const handleStatusFilterChange = (value: string) => {
-    setStatusFilter(value);
+    setStatusFilter(value as ItemStatus | '');
     setItemPage(0);
   };
 
@@ -122,7 +122,7 @@ export default function ListDetail() {
     }
   };
 
-  const getStatusBadgeClass = (status: string) => {
+  const getStatusBadgeClass = (status: ItemStatus) => {
     switch (status) {
       case 'TO_PREPARE':
         return 'bg-amber-500/10 text-amber-400 border border-amber-500/20';

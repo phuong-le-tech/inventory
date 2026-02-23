@@ -24,7 +24,7 @@ export const formatCustomFieldValue = (type: CustomFieldType, value: unknown): s
     case 'BOOLEAN':
       return value ? 'Oui' : 'Non';
     case 'DATE':
-      return new Date(value as string).toLocaleDateString('fr-FR');
+      return new Date(typeof value === 'string' ? value : String(value)).toLocaleDateString('fr-FR');
     case 'NUMBER':
       return String(value);
     case 'SELECT':
@@ -61,7 +61,7 @@ export interface Item {
   id: string;
   name: string;
   itemListId: string;
-  status: string;
+  status: ItemStatus;
   stock: number;
   hasImage: boolean;
   contentType?: string;
@@ -77,7 +77,7 @@ export const getItemImageUrl = (itemId: string): string => {
 export interface ItemFormData {
   name: string;
   itemListId: string;
-  status: string;
+  status: ItemStatus;
   stock: number;
   customFieldValues?: Record<string, unknown>;
 }
@@ -105,7 +105,7 @@ export interface ItemSearchParams {
   sortDir?: 'asc' | 'desc';
   search?: string;
   itemListId?: string;
-  status?: string;
+  status?: ItemStatus;
 }
 
 export interface ItemListSearchParams {
@@ -118,7 +118,9 @@ export interface ItemListSearchParams {
 
 export const STATUS_OPTIONS = ['TO_PREPARE', 'TO_VERIFY', 'PENDING', 'READY', 'ARCHIVED'] as const;
 
-export const STATUS_LABELS: Record<string, string> = {
+export type ItemStatus = (typeof STATUS_OPTIONS)[number];
+
+export const STATUS_LABELS: Record<ItemStatus, string> = {
   TO_PREPARE: 'À préparer',
   TO_VERIFY: 'À vérifier',
   PENDING: 'En attente',
@@ -126,6 +128,6 @@ export const STATUS_LABELS: Record<string, string> = {
   ARCHIVED: 'Archivé',
 };
 
-export const formatStatus = (status: string): string => {
+export const formatStatus = (status: ItemStatus): string => {
   return STATUS_LABELS[status] || status;
 };

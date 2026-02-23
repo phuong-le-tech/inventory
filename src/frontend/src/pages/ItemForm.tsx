@@ -140,7 +140,9 @@ export default function ItemForm() {
       setImageFile(file);
       const reader = new FileReader();
       reader.onloadend = () => {
-        setImagePreview(reader.result as string);
+        if (typeof reader.result === 'string') {
+          setImagePreview(reader.result);
+        }
       };
       reader.readAsDataURL(file);
     }
@@ -233,7 +235,7 @@ export default function ItemForm() {
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-stone-400 mb-2 uppercase tracking-wider">
+            <label htmlFor="item-list" className="block text-xs font-medium text-stone-400 mb-2 uppercase tracking-wider">
               Liste *
             </label>
             <Controller
@@ -241,6 +243,7 @@ export default function ItemForm() {
               control={control}
               render={({ field }) => (
                 <ListCombobox
+                  id="item-list"
                   value={field.value}
                   onChange={field.onChange}
                   error={Boolean(errors.itemListId)}

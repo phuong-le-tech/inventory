@@ -5,6 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { AlertCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { loginSchema, LoginFormData } from '../schemas/auth.schemas';
+import { getApiErrorMessage } from '../utils/errorUtils';
 
 export function LoginPage() {
   const [serverError, setServerError] = useState('');
@@ -29,12 +30,7 @@ export function LoginPage() {
       await login(data);
       navigate(from, { replace: true });
     } catch (err: unknown) {
-      const errorMessage =
-        err instanceof Error
-          ? err.message
-          : (err as { response?: { data?: { error?: { message?: string } } } })?.response?.data
-              ?.error?.message || 'Invalid email or password';
-      setServerError(errorMessage);
+      setServerError(getApiErrorMessage(err, 'Email ou mot de passe invalide'));
     } finally {
       setLoading(false);
     }
@@ -45,12 +41,12 @@ export function LoginPage() {
       <div className="w-full max-w-md animate-fade-in-up">
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 shadow-glow-amber mb-4">
-            <svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg aria-hidden="true" className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
             </svg>
           </div>
           <h1 className="font-display text-3xl text-stone-100 mb-2">Inventory</h1>
-          <p className="text-stone-400">Sign in to manage your inventory</p>
+          <p className="text-stone-400">Connectez-vous pour gérer votre inventaire</p>
         </div>
 
         <div className="bg-surface-card rounded-2xl p-8 shadow-premium border border-white/5">
@@ -74,7 +70,7 @@ export function LoginPage() {
                     ? 'border-red-400/40 focus:ring-red-400/30 focus:border-red-400/50'
                     : 'border-white/10 focus:ring-accent/50 focus:border-accent'
                 }`}
-                placeholder="you@example.com"
+                placeholder="vous@exemple.com"
               />
               {errors.email && (
                 <p className="mt-2 text-sm text-red-400 flex items-center gap-1.5">
@@ -86,7 +82,7 @@ export function LoginPage() {
 
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-stone-300 mb-2">
-                Password
+                Mot de passe
               </label>
               <input
                 id="password"
@@ -97,7 +93,7 @@ export function LoginPage() {
                     ? 'border-red-400/40 focus:ring-red-400/30 focus:border-red-400/50'
                     : 'border-white/10 focus:ring-accent/50 focus:border-accent'
                 }`}
-                placeholder="Enter your password"
+                placeholder="Entrez votre mot de passe"
               />
               {errors.password && (
                 <p className="mt-2 text-sm text-red-400 flex items-center gap-1.5">
@@ -114,14 +110,14 @@ export function LoginPage() {
             >
               {loading ? (
                 <span className="flex items-center justify-center gap-2">
-                  <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                  <svg aria-hidden="true" className="animate-spin h-5 w-5" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                   </svg>
-                  Signing in...
+                  Connexion…
                 </span>
               ) : (
-                'Sign in'
+                'Se connecter'
               )}
             </button>
           </form>
@@ -131,7 +127,7 @@ export function LoginPage() {
               <div className="w-full border-t border-white/10"></div>
             </div>
             <div className="relative flex justify-center text-sm">
-              <span className="px-4 bg-surface-card text-stone-500">or continue with</span>
+              <span className="px-4 bg-surface-card text-stone-500">ou continuer avec</span>
             </div>
           </div>
 
@@ -140,7 +136,7 @@ export function LoginPage() {
             type="button"
             className="w-full py-3 px-4 bg-surface-elevated hover:bg-surface-overlay border border-white/10 text-stone-100 font-medium rounded-lg transition-colors flex items-center justify-center gap-3"
           >
-            <svg className="w-5 h-5" viewBox="0 0 24 24">
+            <svg aria-hidden="true" className="w-5 h-5" viewBox="0 0 24 24">
               <path
                 fill="currentColor"
                 d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -158,12 +154,12 @@ export function LoginPage() {
                 d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
               />
             </svg>
-            Sign in with Google
+            Se connecter avec Google
           </button>
         </div>
 
         <p className="mt-6 text-center text-stone-500 text-sm">
-          Contact your administrator to create an account
+          Contactez votre administrateur pour créer un compte
         </p>
       </div>
     </div>

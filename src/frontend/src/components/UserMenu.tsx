@@ -19,6 +19,17 @@ export function UserMenu() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  useEffect(() => {
+    if (!isOpen) return;
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen]);
+
   const handleLogout = async () => {
     await logout();
     navigate('/login');
@@ -30,6 +41,8 @@ export function UserMenu() {
     <div ref={menuRef} className="relative">
       <button
         onClick={() => setIsOpen(!isOpen)}
+        aria-haspopup="true"
+        aria-expanded={isOpen}
         className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-colors hover:bg-white/[0.04] border border-transparent hover:border-white/[0.06]"
       >
         <div className="w-9 h-9 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white text-sm font-medium shadow-inner-light">
@@ -47,10 +60,11 @@ export function UserMenu() {
       </button>
 
       {isOpen && (
-        <div className="absolute bottom-full left-0 right-0 mb-2 bg-surface-elevated rounded-xl border border-white/[0.06] shadow-premium-hover overflow-hidden animate-fade-in">
+        <div role="menu" className="absolute bottom-full left-0 right-0 mb-2 bg-surface-elevated rounded-xl border border-white/[0.06] shadow-premium-hover overflow-hidden animate-fade-in">
           {isAdmin && (
             <Link
               to="/admin/users"
+              role="menuitem"
               onClick={() => setIsOpen(false)}
               className="flex items-center gap-3 px-4 py-3 text-sm text-stone-300 hover:text-stone-100 hover:bg-white/[0.04] transition-colors"
             >
@@ -59,6 +73,7 @@ export function UserMenu() {
             </Link>
           )}
           <button
+            role="menuitem"
             onClick={handleLogout}
             className="w-full flex items-center gap-3 px-4 py-3 text-sm text-stone-300 hover:text-red-400 hover:bg-red-500/10 transition-colors"
           >
