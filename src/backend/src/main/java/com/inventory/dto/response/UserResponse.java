@@ -12,6 +12,7 @@ public record UserResponse(
     Role role,
     String pictureUrl,
     boolean hasGoogleAccount,
+    boolean enabled,
     LocalDateTime createdAt
 ) {
     public static UserResponse fromEntity(User user) {
@@ -21,6 +22,7 @@ public record UserResponse(
             user.getRole(),
             user.getPictureUrl(),
             user.getGoogleId() != null,
+            user.isEnabled(),
             user.getCreatedAt()
         );
     }

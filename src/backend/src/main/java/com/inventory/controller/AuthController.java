@@ -1,7 +1,10 @@
 package com.inventory.controller;
 
+import com.inventory.dto.request.ForgotPasswordRequest;
 import com.inventory.dto.request.GoogleAuthRequest;
 import com.inventory.dto.request.LoginRequest;
+import com.inventory.dto.request.ResendVerificationRequest;
+import com.inventory.dto.request.ResetPasswordRequest;
 import com.inventory.dto.request.SignupRequest;
 import com.inventory.dto.response.AuthResponse;
 import com.inventory.dto.response.UserResponse;
@@ -54,6 +57,46 @@ public class AuthController {
     ) {
         loginRateLimiter.checkRateLimit(httpRequest.getRemoteAddr());
         return ResponseEntity.ok(authService.googleAuth(request, response));
+    }
+
+    @GetMapping("/verify")
+    public ResponseEntity<Void> verifyEmail(
+            @RequestParam String token,
+            HttpServletRequest httpRequest
+    ) {
+        loginRateLimiter.checkRateLimit(httpRequest.getRemoteAddr());
+        authService.verifyEmail(token);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/resend-verification")
+    public ResponseEntity<Void> resendVerification(
+            @Valid @RequestBody ResendVerificationRequest request,
+            HttpServletRequest httpRequest
+    ) {
+        loginRateLimiter.checkRateLimit(httpRequest.getRemoteAddr());
+        authService.resendVerification(request.email());
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<Void> forgotPassword(
+            @Valid @RequestBody ForgotPasswordRequest request,
+            HttpServletRequest httpRequest
+    ) {
+        loginRateLimiter.checkRateLimit(httpRequest.getRemoteAddr());
+        authService.forgotPassword(request.email());
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<Void> resetPassword(
+            @Valid @RequestBody ResetPasswordRequest request,
+            HttpServletRequest httpRequest
+    ) {
+        loginRateLimiter.checkRateLimit(httpRequest.getRemoteAddr());
+        authService.resetPassword(request.token(), request.password());
+        return ResponseEntity.ok().build();
     }
 
     @PostMapping("/logout")

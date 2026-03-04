@@ -30,6 +30,9 @@ services:
         VITE_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
     ports:
       - "3000:80"
+    environment:
+      BACKEND_URL: http://backend:8080
+      PORT: 80
     depends_on:
       - backend
     restart: unless-stopped

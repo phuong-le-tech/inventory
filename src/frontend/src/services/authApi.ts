@@ -26,6 +26,26 @@ export const authApi = {
     const response = await http.get<User>('/auth/me');
     return response.data;
   },
+
+  verifyEmail: async (token: string): Promise<void> => {
+    await http.get('/auth/verify', { params: { token } });
+  },
+
+  resendVerification: async (email: string): Promise<void> => {
+    await http.post('/auth/resend-verification', { email });
+  },
+
+  forgotPassword: async (email: string): Promise<void> => {
+    await http.post('/auth/forgot-password', { email });
+  },
+
+  resetPassword: async (token: string, password: string): Promise<void> => {
+    await http.post('/auth/reset-password', { token, password });
+  },
+
+  deleteAccount: async (): Promise<void> => {
+    await http.delete('/account');
+  },
 };
 
 export const adminApi = {

@@ -1,43 +1,58 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, KeyRound } from 'lucide-react';
 import { motion } from 'motion/react';
-import { signupSchema, SignupFormData } from '../schemas/auth.schemas';
-import { getApiErrorMessage } from '../utils/errorUtils';
+import { resetPasswordSchema, ResetPasswordFormData } from '../schemas/auth.schemas';
 import { authApi } from '../services/authApi';
-import { GoogleAuthButton, GoogleDivider } from '@/components/GoogleAuthButton';
+import { getApiErrorMessage } from '../utils/errorUtils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { DotPattern } from '@/components/effects/dot-pattern';
 import { BlurFade } from '@/components/effects/blur-fade';
 
-export function SignupPage() {
+export function ResetPassword() {
   const [serverError, setServerError] = useState('');
   const [loading, setLoading] = useState(false);
-
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const token = searchParams.get('token');
 
   const {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<SignupFormData>({ resolver: zodResolver(signupSchema) });
+  } = useForm<ResetPasswordFormData>({ resolver: zodResolver(resetPasswordSchema) });
 
-  const onSubmit = async (data: SignupFormData) => {
+  const onSubmit = async (data: ResetPasswordFormData) => {
+    if (!token) return;
     setServerError('');
     setLoading(true);
     try {
-      await authApi.signup(data);
-      navigate('/verify-email', { replace: true });
+      await authApi.resetPassword(token, data.password);
+      navigate('/login?reset=true', { replace: true });
     } catch (err: unknown) {
-      setServerError(getApiErrorMessage(err, 'Echec de la creation du compte'));
+      setServerError(getApiErrorMessage(err, 'Le lien est invalide ou a expire'));
     } finally {
       setLoading(false);
     }
   };
+
+  if (!token) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background px-6">
+        <div className="text-center">
+          <h2 className="font-display text-2xl font-semibold mb-2">Lien invalide</h2>
+          <p className="text-muted-foreground mb-6">Ce lien de reinitialisation est invalide.</p>
+          <Button asChild>
+            <Link to="/forgot-password">Demander un nouveau lien</Link>
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex relative overflow-hidden bg-background">
@@ -45,9 +60,7 @@ export function SignupPage() {
       <div className="hidden lg:flex lg:w-[45%] relative items-center justify-center overflow-hidden">
         <DotPattern className="opacity-40" width={20} height={20} cr={1} />
         <BlurFade delay={0.1} duration={0.8} blur="20px">
-          <h1
-            className="font-display text-[8rem] xl:text-[10rem] font-bold text-foreground/[0.04] select-none leading-none -rotate-3"
-          >
+          <h1 className="font-display text-[8rem] xl:text-[10rem] font-bold text-foreground/[0.04] select-none leading-none -rotate-3">
             Inven
             <br />
             tory
@@ -66,16 +79,14 @@ export function SignupPage() {
           <div className="mb-10">
             <BlurFade delay={0.2}>
               <div className="w-12 h-12 bg-foreground rounded-xl flex items-center justify-center mb-6">
-                <svg aria-hidden="true" className="w-6 h-6 text-background" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                </svg>
+                <KeyRound className="w-6 h-6 text-background" />
               </div>
             </BlurFade>
             <BlurFade delay={0.3}>
-              <h1 className="font-display text-4xl font-semibold tracking-tight mb-2">Creer un compte</h1>
+              <h1 className="font-display text-4xl font-semibold tracking-tight mb-2">Nouveau mot de passe</h1>
             </BlurFade>
             <BlurFade delay={0.4}>
-              <p className="text-muted-foreground">Commencez a gerer votre inventaire</p>
+              <p className="text-muted-foreground">Choisissez un nouveau mot de passe pour votre compte</p>
             </BlurFade>
           </div>
 
@@ -84,34 +95,20 @@ export function SignupPage() {
               {serverError && (
                 <div className="bg-destructive/10 border border-destructive/20 rounded-lg px-4 py-3 text-destructive text-sm">
                   {serverError}
+                  <Link to="/forgot-password" className="block mt-1 font-medium underline">
+                    Demander un nouveau lien
+                  </Link>
                 </div>
               )}
 
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  {...register('email')}
-                  className={errors.email ? 'border-destructive focus-visible:ring-destructive' : ''}
-                  placeholder="vous@exemple.com"
-                />
-                {errors.email && (
-                  <p className="text-sm text-destructive flex items-center gap-1.5">
-                    <AlertCircle className="h-4 w-4 flex-shrink-0" />
-                    {errors.email.message}
-                  </p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="password">Mot de passe</Label>
+                <Label htmlFor="password">Nouveau mot de passe</Label>
                 <Input
                   id="password"
                   type="password"
                   {...register('password')}
                   className={errors.password ? 'border-destructive focus-visible:ring-destructive' : ''}
-                  placeholder="Minimum 8 caracteres"
+                  placeholder="Minimum 12 caracteres"
                 />
                 {errors.password && (
                   <p className="text-sm text-destructive flex items-center gap-1.5">
@@ -150,39 +147,18 @@ export function SignupPage() {
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                     </svg>
-                    Creation du compte...
+                    Reinitialisation...
                   </span>
                 ) : (
-                  'Creer mon compte'
+                  'Reinitialiser le mot de passe'
                 )}
               </Button>
-
-              <p className="text-xs text-muted-foreground text-center">
-                En vous inscrivant, vous acceptez nos{' '}
-                <Link to="/terms" className="text-foreground font-medium hover:underline">
-                  Conditions d'utilisation
-                </Link>{' '}
-                et notre{' '}
-                <Link to="/privacy" className="text-foreground font-medium hover:underline">
-                  Politique de confidentialite
-                </Link>
-                .
-              </p>
             </form>
-
-            <GoogleDivider />
-            <GoogleAuthButton
-              label="S'inscrire avec Google"
-              onSuccess={() => navigate('/', { replace: true })}
-              onError={(message) => setServerError(message)}
-              disabled={loading}
-            />
           </div>
 
           <p className="mt-6 text-center text-muted-foreground text-sm">
-            Vous avez deja un compte ?{' '}
             <Link to="/login" className="text-foreground font-medium hover:underline">
-              Se connecter
+              Retour a la connexion
             </Link>
           </p>
         </motion.div>
