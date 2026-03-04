@@ -1,6 +1,7 @@
 package com.inventory.controller;
 
 import com.inventory.dto.response.ApiErrorResponse;
+import com.inventory.exception.AccountNotVerifiedException;
 import com.inventory.exception.CustomFieldValidationException;
 import jakarta.validation.ConstraintViolationException;
 import com.inventory.exception.FileValidationException;
@@ -95,6 +96,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(BadCredentialsException.class)
     public ResponseEntity<ApiErrorResponse> handleBadCredentials(BadCredentialsException e) {
         return buildErrorResponse(HttpStatus.UNAUTHORIZED, "Invalid email or password");
+    }
+
+    @ExceptionHandler(AccountNotVerifiedException.class)
+    public ResponseEntity<ApiErrorResponse> handleAccountNotVerified(AccountNotVerifiedException e) {
+        return buildErrorResponse(HttpStatus.FORBIDDEN, e.getMessage());
     }
 
     @ExceptionHandler(RateLimitExceededException.class)

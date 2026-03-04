@@ -1,7 +1,9 @@
 FROM node:20-alpine AS build
 WORKDIR /app
 ARG VITE_GOOGLE_CLIENT_ID
+ARG VITE_SENTRY_DSN
 ENV VITE_GOOGLE_CLIENT_ID=$VITE_GOOGLE_CLIENT_ID
+ENV VITE_SENTRY_DSN=$VITE_SENTRY_DSN
 COPY package.json ./
 RUN npm install
 COPY . .
@@ -9,6 +11,6 @@ RUN npm run build
 
 FROM nginx:alpine
 COPY --from=build /app/dist /usr/share/nginx/html
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY nginx.conf.template /etc/nginx/templates/default.conf.template
 EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]

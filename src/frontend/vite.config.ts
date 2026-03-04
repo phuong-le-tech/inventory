@@ -9,6 +9,18 @@ export default defineConfig({
       "@": new URL("./src", import.meta.url).pathname,
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+          'vendor-ui': ['@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu', '@radix-ui/react-tooltip', '@radix-ui/react-avatar'],
+          'vendor-motion': ['motion'],
+          'vendor-sentry': ['@sentry/react'],
+        },
+      },
+    },
+  },
   test: {
     globals: true,
   },

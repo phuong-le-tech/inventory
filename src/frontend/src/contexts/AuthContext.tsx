@@ -9,6 +9,7 @@ interface AuthContextType {
   signup: (credentials: SignupCredentials) => Promise<void>;
   googleAuth: (credential: string) => Promise<void>;
   logout: () => Promise<void>;
+  deleteAccount: () => Promise<void>;
   isAdmin: boolean;
 }
 
@@ -53,10 +54,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   };
 
+  const deleteAccount = async () => {
+    await authApi.deleteAccount();
+    setUser(null);
+  };
+
   const isAdmin = user?.role === 'ADMIN';
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, signup, googleAuth, logout, isAdmin }}>
+    <AuthContext.Provider value={{ user, loading, login, signup, googleAuth, logout, deleteAccount, isAdmin }}>
       {children}
     </AuthContext.Provider>
   );

@@ -1,12 +1,12 @@
 import { useState } from 'react';
-import { useNavigate, useLocation, Link } from 'react-router-dom';
+import { useNavigate, useLocation, useSearchParams, Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, CheckCircle } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useAuth } from '../contexts/AuthContext';
 import { loginSchema, LoginFormData } from '../schemas/auth.schemas';
-import { getApiErrorMessage } from '../utils/errorUtils';
+import { getApiErrorMessage, getApiErrorStatus } from '../utils/errorUtils';
 import { GoogleAuthButton, GoogleDivider } from '../components/GoogleAuthButton';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,10 +18,15 @@ export function LoginPage() {
   const [serverError, setServerError] = useState('');
   const [loading, setLoading] = useState(false);
 
+  const [isUnverified, setIsUnverified] = useState(false);
+
   const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
 
+  const verified = searchParams.get('verified') === 'true';
+  const reset = searchParams.get('reset') === 'true';
   const from = (location.state as { from?: { pathname: string } })?.from?.pathname || '/';
 
   const {
@@ -32,12 +37,18 @@ export function LoginPage() {
 
   const onSubmit = async (data: LoginFormData) => {
     setServerError('');
+    setIsUnverified(false);
     setLoading(true);
     try {
       await login(data);
       navigate(from, { replace: true });
     } catch (err: unknown) {
-      setServerError(getApiErrorMessage(err, 'Email ou mot de passe invalide'));
+      if (getApiErrorStatus(err) === 403) {
+        setIsUnverified(true);
+        setServerError('Votre compte n\'est pas encore verifie. Consultez votre email.');
+      } else {
+        setServerError(getApiErrorMessage(err, 'Email ou mot de passe invalide'));
+      }
     } finally {
       setLoading(false);
     }
@@ -85,9 +96,28 @@ export function LoginPage() {
 
           <div className="rounded-2xl border bg-card p-8 shadow-float">
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+              {verified && (
+                <div className="bg-green-50 border border-green-200 rounded-lg px-4 py-3 text-green-700 text-sm flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4 flex-shrink-0" />
+                  Email verifie avec succes ! Vous pouvez maintenant vous connecter.
+                </div>
+              )}
+
+              {reset && (
+                <div className="bg-green-50 border border-green-200 rounded-lg px-4 py-3 text-green-700 text-sm flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4 flex-shrink-0" />
+                  Mot de passe reinitialise avec succes ! Connectez-vous avec votre nouveau mot de passe.
+                </div>
+              )}
+
               {serverError && (
                 <div className="bg-destructive/10 border border-destructive/20 rounded-lg px-4 py-3 text-destructive text-sm">
                   {serverError}
+                  {isUnverified && (
+                    <Link to="/verify-email" className="block mt-1 font-medium underline">
+                      Renvoyer l'email de verification
+                    </Link>
+                  )}
                 </div>
               )}
 
@@ -109,7 +139,12 @@ export function LoginPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password">Mot de passe</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="password">Mot de passe</Label>
+                  <Link to="/forgot-password" className="text-xs text-muted-foreground hover:text-foreground hover:underline">
+                    Mot de passe oublie ?
+                  </Link>
+                </div>
                 <Input
                   id="password"
                   type="password"

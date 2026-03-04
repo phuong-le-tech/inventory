@@ -9,15 +9,18 @@ import com.inventory.dto.request.LoginRequest;
 import com.inventory.dto.request.SignupRequest;
 import com.inventory.dto.response.AuthResponse;
 import com.inventory.enums.Role;
+import com.inventory.exception.AccountNotVerifiedException;
 import com.inventory.exception.UnauthorizedException;
 import com.inventory.exception.UserAlreadyExistsException;
 import com.inventory.exception.UserNotFoundException;
 import com.inventory.model.User;
 import com.inventory.repository.UserRepository;
+import com.inventory.repository.VerificationTokenRepository;
 import com.inventory.security.CookieService;
 import com.inventory.security.CustomUserDetails;
 import com.inventory.security.JwtService;
 import com.inventory.service.impl.AuthServiceImpl;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import jakarta.servlet.http.HttpServletResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -28,6 +31,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
@@ -69,6 +73,15 @@ class AuthServiceImplTest {
     private RestTemplate restTemplate;
 
     @Mock
+    private VerificationTokenRepository verificationTokenRepository;
+
+    @Mock
+    private EmailSender emailSender;
+
+    @Mock
+    private PasswordEncoder passwordEncoder;
+
+    @Mock
     private HttpServletResponse httpResponse;
 
     @InjectMocks
@@ -78,6 +91,8 @@ class AuthServiceImplTest {
 
     @BeforeEach
     void setUp() {
+        ReflectionTestUtils.setField(authService, "frontendUrl", "http://localhost:5173");
+
         testUser = new User();
         testUser.setId(UUID.randomUUID());
         testUser.setEmail("test@example.com");
@@ -91,17 +106,18 @@ class AuthServiceImplTest {
     class SignupTests {
 
         @Test
-        @DisplayName("should create user with USER role and auto-login")
+        @DisplayName("should create user with USER role, disable account, and send verification email")
         void signup_success() {
             SignupRequest request = new SignupRequest("new@example.com", "password123", "password123");
 
             when(userService.createUser(any(CreateUserRequest.class))).thenReturn(testUser);
-            when(jwtService.generateToken(any(UUID.class), anyString(), anyString())).thenReturn("jwt-token");
+            when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+            when(verificationTokenRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
             AuthResponse response = authService.signup(request, httpResponse);
 
             assertThat(response.user().email()).isEqualTo(testUser.getEmail());
-            assertThat(response.message()).isEqualTo("Signup successful");
+            assertThat(response.message()).contains("verify");
 
             // Verify user was created with USER role
             ArgumentCaptor<CreateUserRequest> captor = ArgumentCaptor.forClass(CreateUserRequest.class);
@@ -109,9 +125,11 @@ class AuthServiceImplTest {
             assertThat(captor.getValue().role()).isEqualTo(Role.USER);
             assertThat(captor.getValue().email()).isEqualTo("new@example.com");
 
-            // Verify JWT cookie was set
-            verify(jwtService).generateToken(testUser.getId(), testUser.getEmail(), "USER");
-            verify(cookieService).setAccessTokenCookie(httpResponse, "jwt-token");
+            // Verify no JWT cookie was set (user must verify email first)
+            verify(cookieService, never()).setAccessTokenCookie(any(), anyString());
+
+            // Verify verification email was sent
+            verify(emailSender).send(eq(testUser.getEmail()), anyString(), anyString());
         }
 
         @Test
