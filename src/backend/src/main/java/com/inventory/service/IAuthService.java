@@ -6,28 +6,29 @@ import com.inventory.dto.request.SignupRequest;
 import com.inventory.dto.response.AuthResponse;
 import com.inventory.dto.response.UserResponse;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.lang.NonNull;
 
 import java.util.UUID;
 
 public interface IAuthService {
 
-    AuthResponse login(LoginRequest request, HttpServletResponse response);
+    AuthResponse login(@NonNull LoginRequest request, @NonNull HttpServletResponse response);
 
-    AuthResponse signup(SignupRequest request, HttpServletResponse response);
+    AuthResponse signup(@NonNull SignupRequest request, @NonNull HttpServletResponse response);
 
-    AuthResponse googleAuth(GoogleAuthRequest request, HttpServletResponse response);
+    AuthResponse googleAuth(@NonNull GoogleAuthRequest request, @NonNull HttpServletResponse response);
 
-    void verifyEmail(String token);
+    void verifyEmail(@NonNull String token);
 
-    void resendVerification(String email);
+    void resendVerification(@NonNull String email);
 
-    void forgotPassword(String email);
+    void forgotPassword(@NonNull String email);
 
-    void resetPassword(String token, String newPassword);
+    void resetPassword(@NonNull String token, @NonNull String newPassword);
 
-    void logout(HttpServletResponse response);
+    void logout(@NonNull HttpServletResponse response);
 
-    UserResponse getCurrentUser(String email);
+    UserResponse getCurrentUser(@NonNull String email);
 
-    void deleteAccount(UUID userId, HttpServletResponse response);
+    void deleteAccount(@NonNull UUID userId, @NonNull HttpServletResponse response);
 }

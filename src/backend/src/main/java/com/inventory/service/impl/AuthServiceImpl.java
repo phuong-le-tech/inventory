@@ -23,6 +23,7 @@ import com.inventory.service.EmailSender;
 import com.inventory.service.IAuthService;
 import com.inventory.service.IUserService;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.lang.NonNull;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
@@ -68,7 +69,7 @@ public class AuthServiceImpl implements IAuthService {
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     @Override
-    public AuthResponse login(LoginRequest request, HttpServletResponse response) {
+    public AuthResponse login(@NonNull LoginRequest request, @NonNull HttpServletResponse response) {
         Authentication authentication = authenticationManager.authenticate(
             new UsernamePasswordAuthenticationToken(request.email(), request.password())
         );
@@ -90,7 +91,7 @@ public class AuthServiceImpl implements IAuthService {
     }
 
     @Override
-    public AuthResponse signup(SignupRequest request, HttpServletResponse response) {
+    public AuthResponse signup(@NonNull SignupRequest request, @NonNull HttpServletResponse response) {
         CreateUserRequest createRequest = new CreateUserRequest(
             request.email(),
             request.password(),
@@ -110,12 +111,12 @@ public class AuthServiceImpl implements IAuthService {
     }
 
     @Override
-    public AuthResponse googleAuth(GoogleAuthRequest request, HttpServletResponse response) {
+    public AuthResponse googleAuth(@NonNull GoogleAuthRequest request, @NonNull HttpServletResponse response) {
         JsonNode userInfo = fetchGoogleUserInfo(request.credential());
 
         String googleId = userInfo.get("sub").asText();
         String email = userInfo.get("email").asText();
-        String pictureUrl = userInfo.has("picture") ? userInfo.get("picture").asText() : null;
+        String pictureUrl = userInfo.has("picture") ? sanitizePictureUrl(userInfo.get("picture").asText()) : null;
 
         User user = userRepository.findByGoogleId(googleId)
             .orElseGet(() -> findOrCreateGoogleUser(googleId, email, pictureUrl));
@@ -129,16 +130,18 @@ public class AuthServiceImpl implements IAuthService {
     }
 
     @Override
-    public void verifyEmail(String token) {
+    public void verifyEmail(@NonNull String token) {
         VerificationToken verificationToken = verificationTokenRepository
             .findByTokenAndType(token, TokenType.EMAIL_VERIFICATION)
-            .orElseThrow(() -> new UnauthorizedException("Invalid verification token"));
+            .orElseThrow(() -> new UnauthorizedException("Invalid or expired verification token"));
 
-        // Delete token first to prevent replay attacks
+        boolean isExpired = verificationToken.getExpiresAt().isBefore(LocalDateTime.now());
+
+        // Always delete to prevent replay attacks
         verificationTokenRepository.delete(verificationToken);
 
-        if (verificationToken.getExpiresAt().isBefore(LocalDateTime.now())) {
-            throw new UnauthorizedException("Verification token has expired");
+        if (isExpired) {
+            throw new UnauthorizedException("Invalid or expired verification token");
         }
 
         User user = verificationToken.getUser();
@@ -147,7 +150,7 @@ public class AuthServiceImpl implements IAuthService {
     }
 
     @Override
-    public void resendVerification(String email) {
+    public void resendVerification(@NonNull String email) {
         userRepository.findByEmail(email)
             .filter(user -> !user.isEnabled())
             .ifPresent(this::sendVerificationEmail);
@@ -155,7 +158,7 @@ public class AuthServiceImpl implements IAuthService {
     }
 
     @Override
-    public void forgotPassword(String email) {
+    public void forgotPassword(@NonNull String email) {
         userRepository.findByEmail(email)
             .filter(User::isEnabled)
             .ifPresent(this::sendPasswordResetEmail);
@@ -163,16 +166,18 @@ public class AuthServiceImpl implements IAuthService {
     }
 
     @Override
-    public void resetPassword(String token, String newPassword) {
+    public void resetPassword(@NonNull String token, @NonNull String newPassword) {
         VerificationToken resetToken = verificationTokenRepository
             .findByTokenAndType(token, TokenType.PASSWORD_RESET)
-            .orElseThrow(() -> new UnauthorizedException("Invalid reset token"));
+            .orElseThrow(() -> new UnauthorizedException("Invalid or expired reset token"));
 
-        // Delete token first to prevent replay attacks
+        boolean isExpired = resetToken.getExpiresAt().isBefore(LocalDateTime.now());
+
+        // Always delete to prevent replay attacks
         verificationTokenRepository.delete(resetToken);
 
-        if (resetToken.getExpiresAt().isBefore(LocalDateTime.now())) {
-            throw new UnauthorizedException("Reset token has expired");
+        if (isExpired) {
+            throw new UnauthorizedException("Invalid or expired reset token");
         }
 
         User user = resetToken.getUser();
@@ -181,19 +186,19 @@ public class AuthServiceImpl implements IAuthService {
     }
 
     @Override
-    public void logout(HttpServletResponse response) {
+    public void logout(@NonNull HttpServletResponse response) {
         cookieService.clearAccessTokenCookie(response);
     }
 
     @Override
-    public void deleteAccount(UUID userId, HttpServletResponse response) {
+    public void deleteAccount(@NonNull UUID userId, @NonNull HttpServletResponse response) {
         userService.deleteUser(userId);
         cookieService.clearAccessTokenCookie(response);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public UserResponse getCurrentUser(String email) {
+    public UserResponse getCurrentUser(@NonNull String email) {
         User user = userRepository.findByEmail(email)
             .orElseThrow(() -> new UserNotFoundException(email));
 
@@ -212,6 +217,8 @@ public class AuthServiceImpl implements IAuthService {
 
         String verifyUrl = frontendUrl + "/verify-email?token=" + token.getToken();
         String html = """
+            <!DOCTYPE html>
+            <html><head><meta charset="UTF-8"></head><body>
             <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
                 <h2>Verifiez votre adresse email</h2>
                 <p>Merci de vous etre inscrit sur Inventory. Cliquez sur le lien ci-dessous pour verifier votre compte :</p>
@@ -219,6 +226,7 @@ public class AuthServiceImpl implements IAuthService {
                 <p style="color: #666; font-size: 14px;">Ce lien expire dans %d heures.</p>
                 <p style="color: #666; font-size: 14px;">Si vous n'avez pas cree de compte, vous pouvez ignorer cet email.</p>
             </div>
+            </body></html>
             """.formatted(verifyUrl, VERIFICATION_TOKEN_EXPIRY_HOURS);
 
         emailSender.send(user.getEmail(), "Verifiez votre adresse email - Inventory", html);
@@ -236,6 +244,8 @@ public class AuthServiceImpl implements IAuthService {
 
         String resetUrl = frontendUrl + "/reset-password?token=" + token.getToken();
         String html = """
+            <!DOCTYPE html>
+            <html><head><meta charset="UTF-8"></head><body>
             <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
                 <h2>Reinitialiser votre mot de passe</h2>
                 <p>Vous avez demande la reinitialisation de votre mot de passe. Cliquez sur le lien ci-dessous :</p>
@@ -243,6 +253,7 @@ public class AuthServiceImpl implements IAuthService {
                 <p style="color: #666; font-size: 14px;">Ce lien expire dans %d heure(s).</p>
                 <p style="color: #666; font-size: 14px;">Si vous n'avez pas fait cette demande, vous pouvez ignorer cet email.</p>
             </div>
+            </body></html>
             """.formatted(resetUrl, PASSWORD_RESET_TOKEN_EXPIRY_HOURS);
 
         emailSender.send(user.getEmail(), "Reinitialisation du mot de passe - Inventory", html);
@@ -263,7 +274,7 @@ public class AuthServiceImpl implements IAuthService {
         cookieService.setAccessTokenCookie(response, token);
     }
 
-    private JsonNode fetchGoogleUserInfo(String accessToken) {
+    private JsonNode fetchGoogleUserInfo(@NonNull String accessToken) {
         try {
             HttpHeaders headers = new HttpHeaders();
             headers.setBearerAuth(accessToken);
@@ -285,6 +296,21 @@ public class AuthServiceImpl implements IAuthService {
             log.warn("Failed to verify Google access token: {}", e.getMessage());
             throw new UnauthorizedException("Invalid Google credential");
         }
+    }
+
+    private String sanitizePictureUrl(String url) {
+        if (url == null || url.isBlank()) return null;
+        try {
+            java.net.URI uri = java.net.URI.create(url);
+            String host = uri.getHost();
+            if (host != null && (host.endsWith(".googleusercontent.com") || host.endsWith(".googleapis.com"))) {
+                return url;
+            }
+        } catch (IllegalArgumentException e) {
+            // Invalid URI
+        }
+        log.warn("Rejected non-Google picture URL: {}", url.substring(0, Math.min(url.length(), 50)));
+        return null;
     }
 
     private User findOrCreateGoogleUser(String googleId, String email, String pictureUrl) {

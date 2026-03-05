@@ -1,20 +1,26 @@
 package com.inventory.config;
 
-import org.springframework.boot.web.client.RestTemplateBuilder;
+import java.io.IOException;
+import java.net.HttpURLConnection;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.web.client.RestTemplate;
-
-import java.time.Duration;
 
 @Configuration
 public class RestTemplateConfig {
 
     @Bean
-    public RestTemplate restTemplate(RestTemplateBuilder builder) {
-        return builder
-            .connectTimeout(Duration.ofSeconds(5))
-            .readTimeout(Duration.ofSeconds(10))
-            .build();
+    public RestTemplate restTemplate() {
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory() {
+            @Override
+            protected void prepareConnection(HttpURLConnection connection, String httpMethod) throws IOException {
+                super.prepareConnection(connection, httpMethod);
+                connection.setInstanceFollowRedirects(false);
+            }
+        };
+        factory.setConnectTimeout(5_000);
+        factory.setReadTimeout(10_000);
+        return new RestTemplate(factory);
     }
 }

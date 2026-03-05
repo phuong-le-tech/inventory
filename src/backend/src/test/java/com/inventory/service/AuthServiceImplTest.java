@@ -170,6 +170,26 @@ class AuthServiceImplTest {
             assertThat(response.message()).isEqualTo("Login successful");
             verify(cookieService).setAccessTokenCookie(httpResponse, "jwt-token");
         }
+
+        @Test
+        @DisplayName("should throw AccountNotVerifiedException for unverified account")
+        void login_unverifiedAccount() {
+            testUser.setEnabled(false);
+            LoginRequest request = new LoginRequest("test@example.com", "password123");
+            CustomUserDetails userDetails = new CustomUserDetails(
+                testUser.getId(), testUser.getEmail(), testUser.getRole().name()
+            );
+            Authentication auth = new UsernamePasswordAuthenticationToken(userDetails, null);
+
+            when(authenticationManager.authenticate(any())).thenReturn(auth);
+            when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.of(testUser));
+
+            assertThatThrownBy(() -> authService.login(request, httpResponse))
+                .isInstanceOf(AccountNotVerifiedException.class)
+                .hasMessageContaining("not verified");
+
+            verify(cookieService, never()).setAccessTokenCookie(any(), anyString());
+        }
     }
 
     @Nested

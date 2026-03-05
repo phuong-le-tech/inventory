@@ -1,9 +1,9 @@
 package com.inventory.controller;
 
 import com.inventory.dto.request.CreateUserRequest;
+import com.inventory.dto.request.UpdateRoleRequest;
 import com.inventory.dto.response.PageResponse;
 import com.inventory.dto.response.UserResponse;
-import com.inventory.enums.Role;
 import com.inventory.model.User;
 import com.inventory.service.IUserService;
 import jakarta.validation.Valid;
@@ -18,7 +18,6 @@ import org.springframework.lang.NonNull;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -69,10 +68,9 @@ public class AdminController {
     @PatchMapping("/users/{id}/role")
     public ResponseEntity<UserResponse> updateUserRole(
             @PathVariable @NonNull UUID id,
-            @RequestBody Map<String, String> body
+            @Valid @RequestBody @NonNull UpdateRoleRequest request
     ) {
-        Role newRole = Role.valueOf(body.get("role").toUpperCase());
-        User savedUser = userService.updateUserRole(id, newRole);
+        User savedUser = userService.updateUserRole(id, request.role());
         return ResponseEntity.ok(UserResponse.fromEntity(savedUser));
     }
 }

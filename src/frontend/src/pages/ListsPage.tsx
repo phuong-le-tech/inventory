@@ -36,8 +36,7 @@ export default function ListsPage() {
       setLists(response.content);
       setTotalPages(response.totalPages);
       setTotalElements(response.totalElements);
-    } catch (error) {
-      console.error('Failed to load lists:', error);
+    } catch {
       showToast('Echec du chargement des listes', 'error');
     } finally {
       setLoading(false);
@@ -57,8 +56,7 @@ export default function ListsPage() {
       await listsApi.delete(id);
       showToast('Liste supprimee avec succes', 'success');
       loadLists();
-    } catch (error) {
-      console.error('Failed to delete list:', error);
+    } catch {
       showToast('Echec de la suppression de la liste', 'error');
     } finally {
       setDeletingId(null);

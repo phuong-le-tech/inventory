@@ -1,5 +1,7 @@
 package com.inventory.service;
 
+import org.springframework.lang.NonNull;
+
 public interface EmailSender {
-    void send(String to, String subject, String htmlContent);
+    void send(@NonNull String to, @NonNull String subject, @NonNull String htmlContent);
 }

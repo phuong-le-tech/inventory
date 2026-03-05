@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.lang.NonNull;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -29,11 +30,15 @@ public class ApiRateLimitFilter extends OncePerRequestFilter {
     ) throws ServletException, IOException {
 
         String key = resolveKey(request);
+        ApiRateLimiter.RateLimitResult result = rateLimiter.tryAcquire(key);
 
-        if (!rateLimiter.isAllowed(key)) {
+        response.setIntHeader("X-RateLimit-Limit", rateLimiter.getMaxRequests());
+        response.setIntHeader("X-RateLimit-Remaining", result.remaining());
+
+        if (!result.allowed()) {
             response.setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
             response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-            response.setHeader("Retry-After", "60");
+            response.setHeader("Retry-After", String.valueOf(rateLimiter.getWindowSeconds()));
             ApiErrorResponse error = ApiErrorResponse.of(429, "Too many requests. Please try again later.");
             objectMapper.writeValue(response.getWriter(), error);
             return;
@@ -45,14 +50,19 @@ public class ApiRateLimitFilter extends OncePerRequestFilter {
     @Override
     protected boolean shouldNotFilter(@NonNull HttpServletRequest request) {
         String path = request.getRequestURI();
-        return path.startsWith("/api/v1/auth/") || path.startsWith("/actuator/");
+        // Exclude auth endpoints protected by LoginRateLimiter, but not /auth/me
+        return (path.startsWith("/api/v1/auth/") && !path.equals("/api/v1/auth/me"))
+            || path.startsWith("/actuator/");
     }
 
     private String resolveKey(HttpServletRequest request) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth != null && auth.isAuthenticated() && auth.getPrincipal() instanceof CustomUserDetails userDetails) {
+        if (auth != null
+                && auth.isAuthenticated()
+                && !(auth instanceof AnonymousAuthenticationToken)
+                && auth.getPrincipal() instanceof CustomUserDetails userDetails) {
             return "user:" + userDetails.getId();
         }
-        return "ip:" + request.getRemoteAddr();
+        return "ip:" + ClientIpResolver.resolve(request);
     }
 }

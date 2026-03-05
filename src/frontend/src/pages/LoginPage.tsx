@@ -27,7 +27,7 @@ export function LoginPage() {
 
   const verified = searchParams.get('verified') === 'true';
   const reset = searchParams.get('reset') === 'true';
-  const from = (location.state as { from?: { pathname: string } })?.from?.pathname || '/';
+  const from = (location.state as { from?: { pathname: string } })?.from?.pathname || '/dashboard';
 
   const {
     register,

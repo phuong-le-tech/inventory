@@ -8,15 +8,18 @@ import com.inventory.model.User;
 import com.inventory.repository.UserRepository;
 import com.inventory.service.IUserService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.lang.NonNull;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -45,33 +48,40 @@ public class UserServiceImpl implements IUserService {
         return userRepository.save(user);
     }
 
+    // SERIALIZABLE isolation + findByIdWithLock prevents TOCTOU on last-admin check
     @Override
+    @Transactional(isolation = Isolation.SERIALIZABLE)
     public void deleteUser(@NonNull UUID id) {
-        if (!userRepository.existsById(id)) {
-            throw new UserNotFoundException(id);
+        User user = userRepository.findByIdWithLock(id)
+            .orElseThrow(() -> new UserNotFoundException(id));
+
+        if (user.getRole() == Role.ADMIN) {
+            long adminCount = userRepository.countByRole(Role.ADMIN);
+            if (adminCount <= 1) {
+                log.warn("Attempted to delete last admin user: {}", user.getEmail());
+                throw new IllegalStateException("Cannot delete the last admin user");
+            }
         }
+
         userRepository.deleteById(id);
     }
 
     @Override
+    @Transactional(isolation = Isolation.SERIALIZABLE)
     public User updateUserRole(@NonNull UUID id, @NonNull Role role) {
-        User user = userRepository.findById(id)
+        User user = userRepository.findByIdWithLock(id)
             .orElseThrow(() -> new UserNotFoundException(id));
+
+        if (user.getRole() == Role.ADMIN && role != Role.ADMIN) {
+            long adminCount = userRepository.countByRole(Role.ADMIN);
+            if (adminCount <= 1) {
+                log.warn("Attempted to remove last admin user: {}", user.getEmail());
+                throw new IllegalStateException("Cannot remove the last admin user");
+            }
+        }
 
         user.setRole(role);
         return userRepository.save(user);
     }
 
-    @Override
-    @Transactional(readOnly = true)
-    public User getUserById(@NonNull UUID id) {
-        return userRepository.findById(id)
-            .orElseThrow(() -> new UserNotFoundException(id));
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public boolean existsByEmail(@NonNull String email) {
-        return userRepository.existsByEmail(email);
-    }
 }

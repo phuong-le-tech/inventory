@@ -12,11 +12,11 @@ public record SignupRequest(
     String email,
 
     @NotBlank(message = "Password is required")
-    @Size(min = 12, message = "Password must be at least 12 characters")
-    @Pattern(
-        regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d).+$",
-        message = "Password must contain at least one lowercase letter, one uppercase letter, and one digit"
-    )
+    @Size(min = PasswordConstraints.MIN_LENGTH, message = PasswordConstraints.MIN_LENGTH_MESSAGE)
+    @Pattern(regexp = PasswordConstraints.LOWERCASE_PATTERN, message = PasswordConstraints.LOWERCASE_MESSAGE)
+    @Pattern(regexp = PasswordConstraints.UPPERCASE_PATTERN, message = PasswordConstraints.UPPERCASE_MESSAGE)
+    @Pattern(regexp = PasswordConstraints.DIGIT_PATTERN, message = PasswordConstraints.DIGIT_MESSAGE)
+    @Pattern(regexp = PasswordConstraints.SPECIAL_CHAR_PATTERN, message = PasswordConstraints.SPECIAL_CHAR_MESSAGE)
     String password,
 
     @NotBlank(message = "Password confirmation is required")

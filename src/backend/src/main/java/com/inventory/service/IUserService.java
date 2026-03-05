@@ -18,8 +18,4 @@ public interface IUserService {
     void deleteUser(@NonNull UUID id);
 
     User updateUserRole(@NonNull UUID id, @NonNull Role role);
-
-    User getUserById(@NonNull UUID id);
-
-    boolean existsByEmail(@NonNull String email);
 }

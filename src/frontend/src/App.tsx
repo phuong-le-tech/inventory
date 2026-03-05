@@ -6,6 +6,7 @@ import { LoginPage } from './pages/LoginPage';
 import { SignupPage } from './pages/SignupPage';
 import Dashboard from './pages/Dashboard';
 
+const LandingPage = lazy(() => import('./pages/LandingPage'));
 const ListsPage = lazy(() => import('./pages/ListsPage'));
 const ListDetail = lazy(() => import('./pages/ListDetail'));
 const ListForm = lazy(() => import('./pages/ListForm'));
@@ -22,6 +23,7 @@ export default function App() {
   return (
     <Suspense>
     <Routes>
+      <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/signup" element={<SignupPage />} />
       <Route path="/privacy" element={<PrivacyPolicy />} />
@@ -35,7 +37,7 @@ export default function App() {
           <ProtectedRoute>
             <Layout>
               <Routes>
-                <Route path="/" element={<Dashboard />} />
+                <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/lists" element={<ListsPage />} />
                 <Route path="/lists/new" element={<ListForm />} />
                 <Route path="/lists/:id" element={<ListDetail />} />

@@ -4,7 +4,7 @@ A full-stack inventory management application that lets users organize items int
 
 ## Features
 
-- **Authentication** — Email/password login with JWT tokens stored in HTTP-only cookies, optional Google OAuth2 sign-in
+- **Authentication** — Email/password login with JWT tokens stored in HTTP-only cookies, optional Google OAuth2, email verification, password reset
 - **Dashboard** — Overview with inventory statistics (total items, status breakdown, category counts)
 - **Item Lists** — Create and manage custom lists to organize inventory, with custom field definitions per list
 - **Items** — Add, edit, and delete items with image upload, status tracking, and search/filtering
@@ -15,7 +15,7 @@ A full-stack inventory management application that lets users organize items int
 
 | Layer           | Technologies                                                              |
 | --------------- | ------------------------------------------------------------------------- |
-| **Backend**     | Java 21, Spring Boot 3.5, Spring Security, Spring Data JPA, Lombok        |
+| **Backend**     | Java 21, Spring Boot 3.5, Spring Security, Spring Data JPA, Flyway, Lombok |
 | **Auth**        | JWT (jjwt), Google OAuth2 (optional)                                      |
 | **Database**    | PostgreSQL 16 (production/dev), H2 in-memory (standalone dev)             |
 | **Frontend**    | React 18, TypeScript, Vite 7, TailwindCSS, Radix UI, React Hook Form, Zod |
@@ -112,19 +112,24 @@ The dev server starts on **http://localhost:5173** and automatically proxies `/a
 
 ## Environment Variables
 
-Development defaults are defined in `.env.dev`. Key variables:
+Copy `.env.example` to `.env.dev` and fill in the values. Key variables:
 
-| Variable                 | Default           | Description                             |
-| ------------------------ | ----------------- | --------------------------------------- |
-| `DB_HOST`                | `localhost`       | PostgreSQL host                         |
-| `DB_PORT`                | `5432`            | PostgreSQL port                         |
-| `DB_NAME`                | `inventory`       | Database name                           |
-| `DB_USERNAME`            | `postgres`        | Database user                           |
-| `DB_PASSWORD`            | `postgres`        | Database password                       |
-| `JWT_SECRET`             | _(dev key)_       | Secret for signing JWT tokens           |
-| `JWT_EXPIRATION_MS`      | `86400000` (24 h) | JWT token lifetime                      |
-| `SPRING_PROFILES_ACTIVE` | `dev`             | Spring profile (`dev`, `prod`, `oauth`) |
-| `GOOGLE_CLIENT_ID`       | —                 | Google OAuth2 client ID (optional)      |
-| `GOOGLE_CLIENT_SECRET`   | —                 | Google OAuth2 client secret (optional)  |
-
-> To enable Google OAuth2, set `SPRING_PROFILES_ACTIVE=dev,oauth` and provide valid Google credentials.
+| Variable                 | Required | Default                         | Description                                              |
+| ------------------------ | -------- | ------------------------------- | -------------------------------------------------------- |
+| `DB_HOST`                | Yes      | `localhost`                     | PostgreSQL host                                          |
+| `DB_PORT`                | No       | `5432`                          | PostgreSQL port                                          |
+| `DB_NAME`                | Yes      | `inventory`                     | Database name                                            |
+| `DB_USERNAME`            | Yes      | `postgres`                      | Database user                                            |
+| `DB_PASSWORD`            | Yes      | `postgres`                      | Database password                                        |
+| `SPRING_PROFILES_ACTIVE` | No       | `dev`                           | Spring profile (`dev`, `prod`)                           |
+| `CORS_ALLOWED_ORIGINS`   | No       | `localhost:5173,localhost:3000`  | CORS allowed origins (comma-separated)                   |
+| `JWT_SECRET`             | Yes      | _(dev key)_                     | Secret for signing JWT tokens (min 32 chars)             |
+| `JWT_EXPIRATION_MS`      | No       | `86400000` (24 h)               | JWT token lifetime in milliseconds                       |
+| `COOKIE_SECURE`          | No       | `false`                         | Set `true` in production (HTTPS)                         |
+| `FRONTEND_URL`           | No       | `http://localhost:5173`         | Frontend URL for email links                             |
+| `GOOGLE_CLIENT_ID`       | No       | —                               | Google OAuth2 client ID (optional)                       |
+| `EMAIL_PROVIDER`         | No       | `noop`                          | Email provider (`noop` = console, `resend` = Resend API) |
+| `EMAIL_FROM`             | No       | `noreply@example.com`           | Sender email address                                     |
+| `RESEND_API_KEY`         | No       | —                               | Resend API key (required when `EMAIL_PROVIDER=resend`)   |
+| `SENTRY_DSN`             | No       | —                               | Backend Sentry DSN (optional, leave empty to disable)    |
+| `VITE_SENTRY_DSN`        | No       | —                               | Frontend Sentry DSN (optional, bundled into JS)          |

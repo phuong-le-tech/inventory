@@ -5,8 +5,8 @@ describe('signupSchema', () => {
   it('accepts valid signup data', () => {
     const result = signupSchema.safeParse({
       email: 'user@example.com',
-      password: 'StrongPass123',
-      confirmPassword: 'StrongPass123',
+      password: 'StrongPass123!',
+      confirmPassword: 'StrongPass123!',
     });
     expect(result.success).toBe(true);
   });
@@ -14,8 +14,8 @@ describe('signupSchema', () => {
   it('rejects invalid email', () => {
     const result = signupSchema.safeParse({
       email: 'not-an-email',
-      password: 'StrongPass123',
-      confirmPassword: 'StrongPass123',
+      password: 'StrongPass123!',
+      confirmPassword: 'StrongPass123!',
     });
     expect(result.success).toBe(false);
     if (!result.success) {
@@ -62,10 +62,19 @@ describe('signupSchema', () => {
     expect(result.success).toBe(false);
   });
 
+  it('rejects password without special character', () => {
+    const result = signupSchema.safeParse({
+      email: 'user@example.com',
+      password: 'StrongPass1234',
+      confirmPassword: 'StrongPass1234',
+    });
+    expect(result.success).toBe(false);
+  });
+
   it('rejects mismatched passwords', () => {
     const result = signupSchema.safeParse({
       email: 'user@example.com',
-      password: 'StrongPass123',
+      password: 'StrongPass123!',
       confirmPassword: 'Different456!',
     });
     expect(result.success).toBe(false);
@@ -79,7 +88,7 @@ describe('signupSchema', () => {
   it('rejects empty confirm password', () => {
     const result = signupSchema.safeParse({
       email: 'user@example.com',
-      password: 'StrongPass123',
+      password: 'StrongPass123!',
       confirmPassword: '',
     });
     expect(result.success).toBe(false);

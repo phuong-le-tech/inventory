@@ -28,7 +28,7 @@ public class ItemListServiceImpl implements IItemListService {
     private final SecurityUtils securityUtils;
     private final CustomFieldValidator customFieldValidator;
 
-    private UUID requireCurrentUserId() {
+    private @NonNull UUID requireCurrentUserId() {
         return securityUtils.getCurrentUserId()
                 .orElseThrow(() -> new UnauthorizedException("Not authenticated"));
     }

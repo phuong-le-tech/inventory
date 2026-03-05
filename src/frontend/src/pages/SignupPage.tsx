@@ -111,7 +111,7 @@ export function SignupPage() {
                   type="password"
                   {...register('password')}
                   className={errors.password ? 'border-destructive focus-visible:ring-destructive' : ''}
-                  placeholder="Minimum 8 caracteres"
+                  placeholder="Minimum 12 caracteres"
                 />
                 {errors.password && (
                   <p className="text-sm text-destructive flex items-center gap-1.5">
@@ -173,7 +173,7 @@ export function SignupPage() {
             <GoogleDivider />
             <GoogleAuthButton
               label="S'inscrire avec Google"
-              onSuccess={() => navigate('/', { replace: true })}
+              onSuccess={() => navigate('/dashboard', { replace: true })}
               onError={(message) => setServerError(message)}
               disabled={loading}
             />

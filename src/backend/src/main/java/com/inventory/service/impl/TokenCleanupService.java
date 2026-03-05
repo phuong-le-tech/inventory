@@ -18,6 +18,11 @@ public class TokenCleanupService {
     @Scheduled(cron = "0 0 2 * * ?")
     @Transactional
     public void cleanupExpiredTokens() {
-        verificationTokenRepository.deleteByExpiresAtBefore(LocalDateTime.now());
+        int deleted = verificationTokenRepository.deleteByExpiresAtBefore(LocalDateTime.now());
+        if (deleted > 0) {
+            log.info("Cleaned up {} expired verification token(s)", deleted);
+        } else {
+            log.debug("Token cleanup ran — no expired tokens found");
+        }
     }
 }

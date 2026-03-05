@@ -26,7 +26,7 @@ export default function Layout({ children }: LayoutProps) {
   }, [sidebarOpen]);
 
   const navItems = [
-    { to: '/', label: 'Tableau de bord', icon: LayoutDashboard },
+    { to: '/dashboard', label: 'Tableau de bord', icon: LayoutDashboard },
     { to: '/lists', label: 'Mes Listes', icon: List },
   ];
 
@@ -83,7 +83,7 @@ export default function Layout({ children }: LayoutProps) {
         <nav aria-label="Navigation principale" className="p-4 space-y-1 flex-1">
           {navItems.map((item) => {
             const isActive = location.pathname === item.to ||
-              (item.to !== '/' && location.pathname.startsWith(item.to));
+              (item.to !== '/' && location.pathname.startsWith(item.to + '/'));
             return (
               <Link
                 key={item.to}

@@ -1,0 +1,44 @@
+{
+  "properties": [
+    {
+      "name": "app.cors.allowed-origins",
+      "type": "java.lang.String",
+      "description": "Comma-separated list of allowed CORS origins."
+    },
+    {
+      "name": "app.jwt.secret",
+      "type": "java.lang.String",
+      "description": "Secret key for signing JWT tokens."
+    },
+    {
+      "name": "app.jwt.expiration-ms",
+      "type": "java.lang.Long",
+      "description": "JWT token expiration time in milliseconds."
+    },
+    {
+      "name": "app.cookie.secure",
+      "type": "java.lang.Boolean",
+      "description": "Whether to set the Secure flag on cookies."
+    },
+    {
+      "name": "app.frontend-url",
+      "type": "java.lang.String",
+      "description": "Frontend application URL for email links."
+    },
+    {
+      "name": "app.email.provider",
+      "type": "java.lang.String",
+      "description": "Email provider to use (e.g. 'resend', 'noop')."
+    },
+    {
+      "name": "app.email.from",
+      "type": "java.lang.String",
+      "description": "Sender email address."
+    },
+    {
+      "name": "app.email.resend-api-key",
+      "type": "java.lang.String",
+      "description": "API key for the Resend email service."
+    }
+  ]
+}

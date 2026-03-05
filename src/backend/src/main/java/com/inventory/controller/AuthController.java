@@ -34,7 +34,7 @@ public class AuthController {
             HttpServletRequest httpRequest,
             HttpServletResponse response
     ) {
-        loginRateLimiter.checkRateLimit(httpRequest.getRemoteAddr());
+        loginRateLimiter.checkRateLimit(httpRequest);
         return ResponseEntity.ok(authService.login(request, response));
     }
 
@@ -44,7 +44,7 @@ public class AuthController {
             HttpServletRequest httpRequest,
             HttpServletResponse response
     ) {
-        loginRateLimiter.checkRateLimit(httpRequest.getRemoteAddr());
+        loginRateLimiter.checkRateLimit(httpRequest);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(authService.signup(request, response));
     }
@@ -55,7 +55,7 @@ public class AuthController {
             HttpServletRequest httpRequest,
             HttpServletResponse response
     ) {
-        loginRateLimiter.checkRateLimit(httpRequest.getRemoteAddr());
+        loginRateLimiter.checkRateLimit(httpRequest);
         return ResponseEntity.ok(authService.googleAuth(request, response));
     }
 
@@ -64,7 +64,7 @@ public class AuthController {
             @RequestParam String token,
             HttpServletRequest httpRequest
     ) {
-        loginRateLimiter.checkRateLimit(httpRequest.getRemoteAddr());
+        loginRateLimiter.checkRateLimit(httpRequest);
         authService.verifyEmail(token);
         return ResponseEntity.ok().build();
     }
@@ -74,7 +74,7 @@ public class AuthController {
             @Valid @RequestBody ResendVerificationRequest request,
             HttpServletRequest httpRequest
     ) {
-        loginRateLimiter.checkRateLimit(httpRequest.getRemoteAddr());
+        loginRateLimiter.checkRateLimit(httpRequest);
         authService.resendVerification(request.email());
         return ResponseEntity.ok().build();
     }
@@ -84,7 +84,7 @@ public class AuthController {
             @Valid @RequestBody ForgotPasswordRequest request,
             HttpServletRequest httpRequest
     ) {
-        loginRateLimiter.checkRateLimit(httpRequest.getRemoteAddr());
+        loginRateLimiter.checkRateLimit(httpRequest);
         authService.forgotPassword(request.email());
         return ResponseEntity.ok().build();
     }
@@ -94,7 +94,7 @@ public class AuthController {
             @Valid @RequestBody ResetPasswordRequest request,
             HttpServletRequest httpRequest
     ) {
-        loginRateLimiter.checkRateLimit(httpRequest.getRemoteAddr());
+        loginRateLimiter.checkRateLimit(httpRequest);
         authService.resetPassword(request.token(), request.password());
         return ResponseEntity.ok().build();
     }

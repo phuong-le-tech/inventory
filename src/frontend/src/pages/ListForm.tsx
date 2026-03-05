@@ -68,8 +68,7 @@ export default function ListForm() {
         category: list.category || '',
         customFieldDefinitions: list.customFieldDefinitions || [],
       });
-    } catch (error) {
-      console.error('Failed to load list:', error);
+    } catch {
       showToast('Echec du chargement de la liste', 'error');
       navigate('/lists');
     } finally {
@@ -97,8 +96,7 @@ export default function ListForm() {
         showToast('Liste creee avec succes', 'success');
         navigate(`/lists/${newList.id}`);
       }
-    } catch (error) {
-      console.error('Failed to save list:', error);
+    } catch {
       showToast("Echec de l'enregistrement. Veuillez reessayer.", 'error');
     } finally {
       setSubmitting(false);

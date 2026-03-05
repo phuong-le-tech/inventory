@@ -7,6 +7,8 @@ import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
 
 public interface VerificationTokenRepository extends JpaRepository<VerificationToken, UUID> {
 
@@ -14,5 +16,7 @@ public interface VerificationTokenRepository extends JpaRepository<VerificationT
 
     void deleteByUserAndType(User user, TokenType type);
 
-    void deleteByExpiresAtBefore(LocalDateTime dateTime);
+    @Modifying
+    @Query("DELETE FROM VerificationToken t WHERE t.expiresAt < :dateTime")
+    int deleteByExpiresAtBefore(LocalDateTime dateTime);
 }

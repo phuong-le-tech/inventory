@@ -3,6 +3,7 @@ package com.inventory.service.impl;
 import com.inventory.service.EmailSender;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 
 @Slf4j
@@ -11,7 +12,7 @@ import org.springframework.stereotype.Service;
 public class NoOpEmailSender implements EmailSender {
 
     @Override
-    public void send(String to, String subject, String htmlContent) {
+    public void send(@NonNull String to, @NonNull String subject, @NonNull String htmlContent) {
         log.info("=== EMAIL (NoOp) ===");
         log.info("To: {}", to);
         log.info("Subject: {}", subject);

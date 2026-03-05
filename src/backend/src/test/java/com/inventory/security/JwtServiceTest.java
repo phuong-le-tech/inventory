@@ -103,12 +103,12 @@ class JwtServiceTest {
         }
 
         @Test
-        @DisplayName("should extract userId from token")
-        void getUserIdFromToken_returnsCorrectId() {
+        @DisplayName("should extract userId from token via parseToken")
+        void parseToken_returnsCorrectUserId() {
             UUID userId = UUID.randomUUID();
             String token = jwtService.generateToken(userId, "test@example.com", "ADMIN");
 
-            UUID extractedId = jwtService.getUserIdFromToken(token);
+            UUID extractedId = UUID.fromString(jwtService.parseToken(token).getSubject());
 
             assertThat(extractedId).isEqualTo(userId);
         }

@@ -124,6 +124,18 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
+    @DisplayName("AccountNotVerifiedException → 403")
+    void accountNotVerified_returns403() {
+        ResponseEntity<ApiErrorResponse> response = handler.handleAccountNotVerified(
+                new AccountNotVerifiedException("Account not verified. Please check your email."));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().error().code()).isEqualTo(403);
+        assertThat(response.getBody().error().message()).contains("not verified");
+    }
+
+    @Test
     @DisplayName("RateLimitExceededException → 429")
     void rateLimit_returns429() {
         ResponseEntity<ApiErrorResponse> response = handler.handleRateLimit(
@@ -133,7 +145,6 @@ class GlobalExceptionHandlerTest {
         assertThat(response.getBody().error().code()).isEqualTo(429);
     }
 
-    @SuppressWarnings("unchecked")
     @Test
     @DisplayName("ConstraintViolationException → 400")
     void constraintViolation_returns400() {
@@ -149,6 +160,18 @@ class GlobalExceptionHandlerTest {
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
         assertThat(response.getBody().error().message()).contains("must not be blank");
+    }
+
+    @Test
+    @DisplayName("IllegalStateException → 409 (non-dev mode)")
+    void illegalState_returns409() {
+        ResponseEntity<ApiErrorResponse> response = handler.handleIllegalState(
+                new IllegalStateException("Cannot delete the last admin user"));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().error().code()).isEqualTo(409);
+        assertThat(response.getBody().error().message()).isEqualTo("Operation not permitted");
     }
 
     @Test

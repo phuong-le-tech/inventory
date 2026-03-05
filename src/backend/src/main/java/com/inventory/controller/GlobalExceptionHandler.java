@@ -108,6 +108,12 @@ public class GlobalExceptionHandler {
         return buildErrorResponse(HttpStatus.TOO_MANY_REQUESTS, e.getMessage());
     }
 
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<ApiErrorResponse> handleIllegalState(IllegalStateException e) {
+        String message = isDevMode() ? e.getMessage() : "Operation not permitted";
+        return buildErrorResponse(HttpStatus.CONFLICT, message);
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiErrorResponse> handleException(Exception e) {
         String message = isDevMode() ? e.getMessage() : "An unexpected error occurred";
