@@ -1,10 +1,5 @@
 import { describe, it, expect } from 'vitest';
-
-type Role = 'USER' | 'PREMIUM_USER' | 'ADMIN';
-
-function isPremium(role: Role): boolean {
-  return role === 'PREMIUM_USER' || role === 'ADMIN';
-}
+import { isPremium } from '../types/auth';
 
 describe('isPremium', () => {
   it('should return false for USER role', () => {

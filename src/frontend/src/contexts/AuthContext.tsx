@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
-import { User, LoginCredentials, SignupCredentials } from '../types/auth';
+import { User, LoginCredentials, SignupCredentials, isPremium as checkPremium } from '../types/auth';
 import { authApi } from '../services/authApi';
 
 interface AuthContextType {
@@ -71,7 +71,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const isAdmin = user?.role === 'ADMIN';
-  const isPremium = user?.role === 'PREMIUM_USER' || user?.role === 'ADMIN';
+  const isPremium = user ? checkPremium(user.role) : false;
 
   return (
     <AuthContext.Provider value={{ user, loading, login, signup, googleAuth, logout, deleteAccount, refreshUser, isAdmin, isPremium }}>
