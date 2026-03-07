@@ -17,6 +17,7 @@ import com.inventory.security.SecurityUtils;
 import com.inventory.service.CustomFieldValidator;
 import com.inventory.service.IItemService;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.lang.NonNull;
 
 import org.springframework.data.domain.Page;
@@ -35,6 +36,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 public class ItemServiceImpl implements IItemService {
 
@@ -93,7 +95,7 @@ public class ItemServiceImpl implements IItemService {
 
         if (image != null && !image.isEmpty()) {
             byte[] imageBytes = image.getBytes();
-            String detectedType = validateAndDetectContentType(imageBytes);
+            String detectedType = validateAndDetectContentType(imageBytes, image.getContentType());
             item.setImageData(imageBytes);
             item.setContentType(detectedType);
         }
@@ -120,7 +122,7 @@ public class ItemServiceImpl implements IItemService {
 
         if (image != null && !image.isEmpty()) {
             byte[] imageBytes = image.getBytes();
-            String detectedType = validateAndDetectContentType(imageBytes);
+            String detectedType = validateAndDetectContentType(imageBytes, image.getContentType());
             item.setImageData(imageBytes);
             item.setContentType(detectedType);
         }
@@ -224,13 +226,16 @@ public class ItemServiceImpl implements IItemService {
         return itemList;
     }
 
-    private String validateAndDetectContentType(byte[] data) {
+    private String validateAndDetectContentType(byte[] data, String declaredContentType) {
         if (data.length > MAX_FILE_SIZE) {
             throw new FileValidationException("File size exceeds maximum allowed size of 10MB");
         }
         String detectedType = detectContentType(data);
         if (detectedType == null || !ALLOWED_CONTENT_TYPES.contains(detectedType)) {
             throw new FileValidationException("Invalid file type. Allowed types: JPEG, PNG, GIF, WebP");
+        }
+        if (declaredContentType != null && !declaredContentType.equals(detectedType)) {
+            log.warn("Content-Type mismatch: declared={}, detected={}", declaredContentType, detectedType);
         }
         return detectedType;
     }

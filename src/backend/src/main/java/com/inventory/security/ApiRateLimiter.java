@@ -52,7 +52,8 @@ public class ApiRateLimiter {
                 evictLruEntries(MAX_ENTRIES / 10);
             }
             if (existing == null && requests.size() >= MAX_ENTRIES) {
-                log.warn("Rate limiter at capacity ({} entries) after LRU eviction, rejecting new key", MAX_ENTRIES);
+                log.error("Rate limiter at max capacity ({}) after eviction — circuit breaker rejecting new key: {}",
+                        MAX_ENTRIES, k);
                 result.set(new RateLimitResult(false, 0));
                 return null;
             }

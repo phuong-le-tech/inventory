@@ -76,9 +76,14 @@ public class CustomFieldValidator {
                     throw new CustomFieldValidationException(
                             "Field '" + def.label() + "' must be a text value");
                 }
-                if (((String) value).length() > 10_000) {
+                String textValue = (String) value;
+                if (textValue.length() > 1_000) {
                     throw new CustomFieldValidationException(
-                            "Field '" + def.label() + "' must be at most 10,000 characters");
+                            "Field '" + def.label() + "' must be at most 1,000 characters");
+                }
+                if (textValue.chars().anyMatch(c -> c < 32 && c != '\n' && c != '\r' && c != '\t')) {
+                    throw new CustomFieldValidationException(
+                            "Field '" + def.label() + "' contains invalid characters");
                 }
             }
             case NUMBER -> {

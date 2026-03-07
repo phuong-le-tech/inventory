@@ -2,7 +2,6 @@ package com.inventory.service.impl;
 
 import com.inventory.enums.Role;
 import com.inventory.exception.UnauthorizedException;
-import com.inventory.model.StripeWebhookEvent;
 import com.inventory.model.User;
 import com.inventory.repository.StripeWebhookEventRepository;
 import com.inventory.repository.UserRepository;
@@ -23,7 +22,6 @@ import io.sentry.Sentry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -119,10 +117,9 @@ public class StripeServiceImpl implements IStripeService {
             throw new UnauthorizedException("Invalid webhook payload");
         }
 
-        // Idempotency: insert first, rely on unique constraint to reject duplicates (no TOCTOU race)
-        try {
-            webhookEventRepository.saveAndFlush(new StripeWebhookEvent(event.getId(), event.getType()));
-        } catch (DataIntegrityViolationException e) {
+        // Idempotency: atomic INSERT ... ON CONFLICT DO NOTHING — no race condition
+        int inserted = webhookEventRepository.insertIfNotExists(UUID.randomUUID(), event.getId(), event.getType());
+        if (inserted == 0) {
             log.info("Stripe event {} already processed, skipping", event.getId());
             return;
         }

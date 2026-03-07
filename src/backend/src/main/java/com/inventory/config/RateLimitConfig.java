@@ -33,6 +33,11 @@ public class RateLimitConfig {
         return new ApiRateLimiter(5, 60_000); // 5 attempts per minute per email
     }
 
+    @Bean("tokenRateLimiter")
+    public ApiRateLimiter tokenRateLimiter() {
+        return new ApiRateLimiter(5, 60_000); // 5 attempts per minute per token prefix
+    }
+
     @Bean("checkoutRateLimiter")
     public ApiRateLimiter checkoutRateLimiter() {
         return new ApiRateLimiter(5, 60_000); // 5 checkout attempts per minute
