@@ -223,6 +223,7 @@ class StripeServiceImplTest {
             when(session.getId()).thenReturn("cs_test_123");
             when(session.getPaymentStatus()).thenReturn("paid");
             when(session.getAmountTotal()).thenReturn(200L);
+            when(session.getCurrency()).thenReturn("eur");
             when(session.getMetadata()).thenReturn(Map.of("userId", testUserId.toString()));
             when(session.getCustomer()).thenReturn("cus_123");
             when(session.getPaymentIntent()).thenReturn("pi_test_123");
@@ -386,6 +387,7 @@ class StripeServiceImplTest {
             when(session.getId()).thenReturn("cs_test_mismatch");
             when(session.getPaymentStatus()).thenReturn("paid");
             when(session.getAmountTotal()).thenReturn(200L);
+            when(session.getCurrency()).thenReturn("eur");
             when(session.getMetadata()).thenReturn(Map.of("userId", testUserId.toString()));
             when(session.getCustomer()).thenReturn("cus_session_999");
 
@@ -413,6 +415,7 @@ class StripeServiceImplTest {
             when(session.getId()).thenReturn("cs_test_no_cust");
             when(session.getPaymentStatus()).thenReturn("paid");
             when(session.getAmountTotal()).thenReturn(200L);
+            when(session.getCurrency()).thenReturn("eur");
             when(session.getMetadata()).thenReturn(Map.of("userId", testUserId.toString()));
             when(session.getCustomer()).thenReturn(null);
             when(session.getPaymentIntent()).thenReturn("pi_test_123");
@@ -441,6 +444,7 @@ class StripeServiceImplTest {
             when(session.getId()).thenReturn("cs_test_premium");
             when(session.getPaymentStatus()).thenReturn("paid");
             when(session.getAmountTotal()).thenReturn(200L);
+            when(session.getCurrency()).thenReturn("eur");
             when(session.getMetadata()).thenReturn(Map.of("userId", testUserId.toString()));
             when(session.getCustomer()).thenReturn(null);
             when(session.getPaymentIntent()).thenReturn("pi_test_123");
@@ -469,6 +473,7 @@ class StripeServiceImplTest {
             when(session.getId()).thenReturn("cs_test_admin");
             when(session.getPaymentStatus()).thenReturn("paid");
             when(session.getAmountTotal()).thenReturn(200L);
+            when(session.getCurrency()).thenReturn("eur");
             when(session.getMetadata()).thenReturn(Map.of("userId", testUserId.toString()));
             when(session.getCustomer()).thenReturn(null);
             when(session.getPaymentIntent()).thenReturn("pi_test_123");
@@ -497,6 +502,7 @@ class StripeServiceImplTest {
             when(session.getId()).thenReturn("cs_test_not_found");
             when(session.getPaymentStatus()).thenReturn("paid");
             when(session.getAmountTotal()).thenReturn(200L);
+            when(session.getCurrency()).thenReturn("eur");
             when(session.getMetadata()).thenReturn(Map.of("userId", testUserId.toString()));
             when(session.getCustomer()).thenReturn(null);
             when(session.getPaymentIntent()).thenReturn("pi_test_123");
@@ -543,6 +549,7 @@ class StripeServiceImplTest {
             PaymentIntent pi = mock(PaymentIntent.class);
             when(pi.getId()).thenReturn("pi_test_200");
             when(pi.getAmount()).thenReturn(200L);
+            when(pi.getCurrency()).thenReturn("eur");
             when(pi.getMetadata()).thenReturn(Map.of("userId", testUserId.toString()));
 
             EventDataObjectDeserializer deserializer = mock(EventDataObjectDeserializer.class);
@@ -568,6 +575,7 @@ class StripeServiceImplTest {
             PaymentIntent pi = mock(PaymentIntent.class);
             when(pi.getId()).thenReturn("pi_test_fallback");
             when(pi.getAmount()).thenReturn(200L);
+            when(pi.getCurrency()).thenReturn("eur");
             when(pi.getMetadata()).thenReturn(Map.of());
             when(pi.getCustomer()).thenReturn("cus_fallback");
 
