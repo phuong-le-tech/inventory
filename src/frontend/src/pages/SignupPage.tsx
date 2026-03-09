@@ -33,7 +33,7 @@ export function SignupPage() {
       await authApi.signup(data);
       navigate('/verify-email', { replace: true });
     } catch (err: unknown) {
-      setServerError(getApiErrorMessage(err, 'Echec de la creation du compte'));
+      setServerError(getApiErrorMessage(err, 'Échec de la création du compte'));
     } finally {
       setLoading(false);
     }
@@ -72,10 +72,10 @@ export function SignupPage() {
               </div>
             </BlurFade>
             <BlurFade delay={0.3}>
-              <h1 className="font-display text-4xl font-semibold tracking-tight mb-2">Creer un compte</h1>
+              <h1 className="font-display text-4xl font-semibold tracking-tight mb-2">Créer un compte</h1>
             </BlurFade>
             <BlurFade delay={0.4}>
-              <p className="text-muted-foreground">Commencez a gerer votre inventaire</p>
+              <p className="text-muted-foreground">Commencez à gérer votre inventaire</p>
             </BlurFade>
           </div>
 
@@ -95,9 +95,11 @@ export function SignupPage() {
                   {...register('email')}
                   className={errors.email ? 'border-destructive focus-visible:ring-destructive' : ''}
                   placeholder="vous@exemple.com"
+                  aria-invalid={!!errors.email}
+                  aria-describedby={errors.email ? 'email-error' : undefined}
                 />
                 {errors.email && (
-                  <p className="text-sm text-destructive flex items-center gap-1.5">
+                  <p id="email-error" role="alert" className="text-sm text-destructive flex items-center gap-1.5">
                     <AlertCircle className="h-4 w-4 flex-shrink-0" />
                     {errors.email.message}
                   </p>
@@ -111,10 +113,12 @@ export function SignupPage() {
                   type="password"
                   {...register('password')}
                   className={errors.password ? 'border-destructive focus-visible:ring-destructive' : ''}
-                  placeholder="Minimum 12 caracteres"
+                  placeholder="Minimum 12 caractères"
+                  aria-invalid={!!errors.password}
+                  aria-describedby={errors.password ? 'password-error' : undefined}
                 />
                 {errors.password && (
-                  <p className="text-sm text-destructive flex items-center gap-1.5">
+                  <p id="password-error" role="alert" className="text-sm text-destructive flex items-center gap-1.5">
                     <AlertCircle className="h-4 w-4 flex-shrink-0" />
                     {errors.password.message}
                   </p>
@@ -129,9 +133,11 @@ export function SignupPage() {
                   {...register('confirmPassword')}
                   className={errors.confirmPassword ? 'border-destructive focus-visible:ring-destructive' : ''}
                   placeholder="Confirmez votre mot de passe"
+                  aria-invalid={!!errors.confirmPassword}
+                  aria-describedby={errors.confirmPassword ? 'confirmPassword-error' : undefined}
                 />
                 {errors.confirmPassword && (
-                  <p className="text-sm text-destructive flex items-center gap-1.5">
+                  <p id="confirmPassword-error" role="alert" className="text-sm text-destructive flex items-center gap-1.5">
                     <AlertCircle className="h-4 w-4 flex-shrink-0" />
                     {errors.confirmPassword.message}
                   </p>
@@ -150,10 +156,10 @@ export function SignupPage() {
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                     </svg>
-                    Creation du compte...
+                    Création du compte...
                   </span>
                 ) : (
-                  'Creer mon compte'
+                  'Créer mon compte'
                 )}
               </Button>
 
@@ -164,7 +170,7 @@ export function SignupPage() {
                 </Link>{' '}
                 et notre{' '}
                 <Link to="/privacy" className="text-foreground font-medium hover:underline">
-                  Politique de confidentialite
+                  Politique de confidentialité
                 </Link>
                 .
               </p>
@@ -180,7 +186,7 @@ export function SignupPage() {
           </div>
 
           <p className="mt-6 text-center text-muted-foreground text-sm">
-            Vous avez deja un compte ?{' '}
+            Vous avez déjà un compte ?{' '}
             <Link to="/login" className="text-foreground font-medium hover:underline">
               Se connecter
             </Link>

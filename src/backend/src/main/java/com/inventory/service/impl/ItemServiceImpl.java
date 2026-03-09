@@ -190,9 +190,8 @@ public class ItemServiceImpl implements IItemService {
                 .map(item -> new DashboardStats.RecentItemDto(
                         item.getId().toString(),
                         item.getName(),
+                        item.getItemList().getId().toString(),
                         item.getItemList().getName(),
-                        item.getCustomFieldValues() != null && item.getCustomFieldValues().containsKey("sku") 
-                                ? item.getCustomFieldValues().get("sku").toString() : null,
                         item.getStock(),
                         item.getStatus().name(),
                         item.getUpdatedAt()))

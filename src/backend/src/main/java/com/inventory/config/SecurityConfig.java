@@ -97,8 +97,9 @@ public class SecurityConfig {
                     .preload(true)
                     .maxAgeInSeconds(31536000))
                 // CSP 'unsafe-inline' for style-src is required by TailwindCSS — accepted risk
+                // font-src and style-src allow api.fontshare.com for external fonts
                 .contentSecurityPolicy(csp -> csp
-                    .policyDirectives("default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; frame-ancestors 'none'"))
+                    .policyDirectives("default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://api.fontshare.com; img-src 'self' data: blob:; font-src 'self' https://api.fontshare.com; connect-src 'self'; frame-ancestors 'none'"))
                 .referrerPolicy(referrer -> referrer
                     .policy(ReferrerPolicyHeaderWriter.ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN))
                 .permissionsPolicyHeader(pp -> pp

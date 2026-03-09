@@ -28,7 +28,7 @@ export const authApi = {
   },
 
   verifyEmail: async (token: string): Promise<void> => {
-    await http.get('/auth/verify', { params: { token } });
+    await http.post('/auth/verify', { token });
   },
 
   resendVerification: async (email: string): Promise<void> => {

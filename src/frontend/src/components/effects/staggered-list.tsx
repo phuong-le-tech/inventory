@@ -1,3 +1,4 @@
+import * as React from 'react'
 import { motion, type Variants } from 'motion/react'
 import { cn } from '@/lib/utils'
 
@@ -39,13 +40,19 @@ export function StaggeredList({
   className,
   staggerDelay = 0.06,
 }: StaggeredListProps) {
+  // Cap total stagger delay at 0.3s to prevent long waits on large lists
+  const childCount = React.Children.count(children)
+  const maxTotalDelay = 0.3
+  const maxStaggerDelay = childCount > 1 ? maxTotalDelay / (childCount - 1) : staggerDelay
+  const cappedDelay = Math.min(staggerDelay, maxStaggerDelay)
+
   return (
     <motion.div
       className={cn(className)}
       variants={containerVariants}
       initial="hidden"
       animate="visible"
-      custom={{ staggerDelay }}
+      custom={{ staggerDelay: cappedDelay }}
     >
       {children}
     </motion.div>

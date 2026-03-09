@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { AlertTriangle } from 'lucide-react';
 import {
   Dialog,
@@ -8,6 +9,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
 interface ConfirmModalProps {
   isOpen: boolean;
@@ -15,6 +17,7 @@ interface ConfirmModalProps {
   message: string;
   confirmLabel?: string;
   cancelLabel?: string;
+  requireTyping?: string;
   onConfirm: () => void;
   onCancel: () => void;
 }
@@ -25,9 +28,18 @@ export default function ConfirmModal({
   message,
   confirmLabel = 'Confirmer',
   cancelLabel = 'Annuler',
+  requireTyping,
   onConfirm,
   onCancel,
 }: ConfirmModalProps) {
+  const [typedValue, setTypedValue] = useState('');
+
+  useEffect(() => {
+    if (isOpen) setTypedValue('');
+  }, [isOpen]);
+
+  const canConfirm = !requireTyping || typedValue === requireTyping;
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onCancel()}>
       <DialogContent className="sm:max-w-md">
@@ -42,11 +54,24 @@ export default function ConfirmModal({
             </div>
           </div>
         </DialogHeader>
+        {requireTyping && (
+          <div className="space-y-2 pt-2">
+            <p className="text-sm text-muted-foreground">
+              Tapez <span className="font-semibold text-foreground">{requireTyping}</span> pour confirmer
+            </p>
+            <Input
+              value={typedValue}
+              onChange={(e) => setTypedValue(e.target.value)}
+              placeholder={requireTyping}
+              autoComplete="off"
+            />
+          </div>
+        )}
         <DialogFooter className="gap-2 sm:gap-0">
           <Button variant="outline" onClick={onCancel}>
             {cancelLabel}
           </Button>
-          <Button variant="destructive" onClick={onConfirm}>
+          <Button variant="destructive" onClick={onConfirm} disabled={!canConfirm}>
             {confirmLabel}
           </Button>
         </DialogFooter>

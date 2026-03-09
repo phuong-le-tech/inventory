@@ -7,10 +7,10 @@ export default function NotFound() {
       <h1 className="font-display text-6xl font-bold text-foreground/10 mb-4">404</h1>
       <h2 className="font-display text-2xl font-semibold mb-2">Page introuvable</h2>
       <p className="text-muted-foreground mb-8 max-w-md">
-        La page que vous recherchez n'existe pas ou a ete deplacee.
+        La page que vous recherchez n'existe pas ou a été déplacée.
       </p>
       <Button asChild>
-        <Link to="/">Retour au tableau de bord</Link>
+        <Link to="/dashboard">Retour au tableau de bord</Link>
       </Button>
     </div>
   );

@@ -204,7 +204,7 @@ class AuthControllerTest {
     }
 
     @Nested
-    @DisplayName("GET /api/v1/auth/verify")
+    @DisplayName("POST /api/v1/auth/verify")
     class VerifyEmailTests {
 
         @Test
@@ -212,8 +212,9 @@ class AuthControllerTest {
         void verifyEmail_validToken_returnsOk() throws Exception {
             doNothing().when(authService).verifyEmail("valid-token-123");
 
-            mockMvc.perform(get("/api/v1/auth/verify")
-                            .param("token", "valid-token-123"))
+            mockMvc.perform(post("/api/v1/auth/verify")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"token\":\"valid-token-123\"}"))
                     .andExpect(status().isOk());
 
             verify(loginRateLimiter).checkRateLimit(any());

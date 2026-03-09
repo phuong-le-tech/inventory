@@ -24,8 +24,13 @@ const ResetPassword = lazy(() => import('./pages/ResetPassword').then(m => ({ de
 
 export default function App() {
   return (
-    <Suspense>
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-muted border-t-foreground" />
+      </div>
+    }>
     <Routes>
+      {/* Public routes */}
       <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/signup" element={<SignupPage />} />
@@ -34,39 +39,28 @@ export default function App() {
       <Route path="/verify-email" element={<VerifyEmail />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
-      <Route
-        path="/*"
-        element={
-          <ProtectedRoute>
-            <Layout>
-              <Routes>
-                <Route path="/dashboard" element={<Dashboard />} />
-                <Route path="/lists" element={<ListsPage />} />
-                <Route path="/lists/new" element={<ListForm />} />
-                <Route path="/lists/:id" element={<ListDetail />} />
-                <Route path="/lists/:id/edit" element={<ListForm />} />
-                <Route path="/lists/:listId/items/new" element={<ItemForm />} />
-                <Route path="/lists/:listId/items/:itemId/edit" element={<ItemForm />} />
-                <Route path="/upgrade" element={<UpgradePage />} />
-                <Route path="/payment/success" element={<PaymentSuccess />} />
-                <Route path="/payment/cancel" element={<PaymentCancel />} />
-                <Route
-                  path="/admin/users"
-                  element={
-                    <ProtectedRoute adminOnly>
-                      <UsersPage />
-                    </ProtectedRoute>
-                  }
-                />
-                {/* Redirect old routes */}
-                <Route path="/inventory" element={<Navigate to="/lists" replace />} />
-                <Route path="/inventory/*" element={<Navigate to="/lists" replace />} />
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </Layout>
-          </ProtectedRoute>
-        }
-      />
+
+      {/* Protected routes */}
+      <Route path="/dashboard" element={<ProtectedRoute><Layout><Dashboard /></Layout></ProtectedRoute>} />
+      <Route path="/lists" element={<ProtectedRoute><Layout><ListsPage /></Layout></ProtectedRoute>} />
+      <Route path="/lists/new" element={<ProtectedRoute><Layout><ListForm /></Layout></ProtectedRoute>} />
+      <Route path="/lists/:id" element={<ProtectedRoute><Layout><ListDetail /></Layout></ProtectedRoute>} />
+      <Route path="/lists/:id/edit" element={<ProtectedRoute><Layout><ListForm /></Layout></ProtectedRoute>} />
+      <Route path="/lists/:listId/items/new" element={<ProtectedRoute><Layout><ItemForm /></Layout></ProtectedRoute>} />
+      <Route path="/lists/:listId/items/:itemId/edit" element={<ProtectedRoute><Layout><ItemForm /></Layout></ProtectedRoute>} />
+      <Route path="/upgrade" element={<ProtectedRoute><Layout><UpgradePage /></Layout></ProtectedRoute>} />
+      <Route path="/payment/success" element={<ProtectedRoute><Layout><PaymentSuccess /></Layout></ProtectedRoute>} />
+      <Route path="/payment/cancel" element={<ProtectedRoute><Layout><PaymentCancel /></Layout></ProtectedRoute>} />
+
+      {/* Admin routes */}
+      <Route path="/admin/users" element={<ProtectedRoute adminOnly><Layout><UsersPage /></Layout></ProtectedRoute>} />
+
+      {/* Redirect old routes */}
+      <Route path="/inventory" element={<Navigate to="/lists" replace />} />
+      <Route path="/inventory/*" element={<Navigate to="/lists" replace />} />
+
+      {/* 404 catch-all */}
+      <Route path="*" element={<ProtectedRoute><Layout><NotFound /></Layout></ProtectedRoute>} />
     </Routes>
     </Suspense>
   );
