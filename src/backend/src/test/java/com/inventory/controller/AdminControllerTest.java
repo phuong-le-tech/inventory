@@ -4,10 +4,18 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.inventory.config.TestSecurityConfig;
 import com.inventory.dto.request.CreateUserRequest;
 import com.inventory.dto.request.UpdateRoleRequest;
+import com.inventory.dto.request.UpdateStatusRequest;
+import com.inventory.dto.response.AdminDashboardStats;
+import com.inventory.dto.response.AdminUserDetailResponse;
 import com.inventory.enums.Role;
+import com.inventory.exception.ItemListNotFoundException;
 import com.inventory.exception.UserAlreadyExistsException;
 import com.inventory.exception.UserNotFoundException;
+import com.inventory.model.Item;
+import com.inventory.model.ItemList;
 import com.inventory.model.User;
+import com.inventory.repository.ItemListRepository;
+import com.inventory.repository.ItemRepository;
 import com.inventory.security.CustomUserDetails;
 import com.inventory.service.IUserService;
 import org.junit.jupiter.api.BeforeEach;
@@ -20,6 +28,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -27,6 +36,8 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -54,6 +65,12 @@ class AdminControllerTest {
 
     @MockitoBean
     private IUserService userService;
+
+    @MockitoBean
+    private ItemListRepository itemListRepository;
+
+    @MockitoBean
+    private ItemRepository itemRepository;
 
     private CustomUserDetails adminUser;
     private User testUser;
@@ -402,6 +419,339 @@ class AdminControllerTest {
                             .with(user(adminUser)))
                     .andExpect(status().isBadRequest())
                     .andExpect(jsonPath("$.error.code").value(400));
+        }
+    }
+
+    @Nested
+    @DisplayName("GET /api/v1/admin/users/{id}")
+    class GetUserDetailTests {
+
+        @Test
+        @DisplayName("should return user detail")
+        void getUserDetail_existingId_returnsOk() throws Exception {
+            AdminUserDetailResponse detail = new AdminUserDetailResponse(
+                    testUserId, "user@test.com", Role.USER, null, false,
+                    true, 3L, 10L, false, null,
+                    LocalDateTime.now(), LocalDateTime.now());
+
+            when(userService.getUserDetail(testUserId)).thenReturn(detail);
+
+            mockMvc.perform(get("/api/v1/admin/users/{id}", testUserId)
+                            .with(user(adminUser)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.data.email").value("user@test.com"))
+                    .andExpect(jsonPath("$.data.listCount").value(3))
+                    .andExpect(jsonPath("$.data.itemCount").value(10));
+        }
+
+        @Test
+        @DisplayName("should return 404 when user not found")
+        void getUserDetail_nonExistingId_returns404() throws Exception {
+            UUID nonExistingId = UUID.randomUUID();
+            when(userService.getUserDetail(nonExistingId))
+                    .thenThrow(new UserNotFoundException(nonExistingId));
+
+            mockMvc.perform(get("/api/v1/admin/users/{id}", nonExistingId)
+                            .with(user(adminUser)))
+                    .andExpect(status().isNotFound())
+                    .andExpect(jsonPath("$.error.code").value(404));
+        }
+    }
+
+    @Nested
+    @DisplayName("PATCH /api/v1/admin/users/{id}/status")
+    class UpdateUserStatusTests {
+
+        @Test
+        @DisplayName("should update user status")
+        void updateUserStatus_validRequest_returnsUpdatedUser() throws Exception {
+            User disabledUser = new User();
+            disabledUser.setId(testUserId);
+            disabledUser.setEmail("user@test.com");
+            disabledUser.setRole(Role.USER);
+            disabledUser.setEnabled(false);
+            disabledUser.setCreatedAt(LocalDateTime.now());
+
+            UpdateStatusRequest request = new UpdateStatusRequest(false);
+
+            when(userService.updateUserStatus(eq(testUserId), eq(false)))
+                    .thenReturn(disabledUser);
+
+            mockMvc.perform(patch("/api/v1/admin/users/{id}/status", testUserId)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request))
+                            .with(user(adminUser)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.data.email").value("user@test.com"))
+                    .andExpect(jsonPath("$.data.enabled").value(false));
+        }
+
+        @Test
+        @DisplayName("should return 404 when user not found")
+        void updateUserStatus_nonExistingId_returns404() throws Exception {
+            UUID nonExistingId = UUID.randomUUID();
+            UpdateStatusRequest request = new UpdateStatusRequest(false);
+
+            when(userService.updateUserStatus(eq(nonExistingId), eq(false)))
+                    .thenThrow(new UserNotFoundException(nonExistingId));
+
+            mockMvc.perform(patch("/api/v1/admin/users/{id}/status", nonExistingId)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request))
+                            .with(user(adminUser)))
+                    .andExpect(status().isNotFound())
+                    .andExpect(jsonPath("$.error.code").value(404));
+        }
+
+        @Test
+        @DisplayName("should return 400 when enabled is null")
+        void updateUserStatus_nullEnabled_returns400() throws Exception {
+            String requestBody = "{}";
+
+            mockMvc.perform(patch("/api/v1/admin/users/{id}/status", testUserId)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(requestBody)
+                            .with(user(adminUser)))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.error.code").value(400));
+        }
+    }
+
+    @Nested
+    @DisplayName("POST /api/v1/admin/users/{id}/reset-password")
+    class TriggerPasswordResetTests {
+
+        @Test
+        @DisplayName("should trigger password reset")
+        void triggerPasswordReset_existingId_returnsOk() throws Exception {
+            doNothing().when(userService).triggerPasswordReset(testUserId);
+
+            mockMvc.perform(post("/api/v1/admin/users/{id}/reset-password", testUserId)
+                            .with(user(adminUser)))
+                    .andExpect(status().isOk());
+
+            verify(userService).triggerPasswordReset(testUserId);
+        }
+
+        @Test
+        @DisplayName("should return 404 when user not found")
+        void triggerPasswordReset_nonExistingId_returns404() throws Exception {
+            UUID nonExistingId = UUID.randomUUID();
+            doThrow(new UserNotFoundException(nonExistingId))
+                    .when(userService).triggerPasswordReset(nonExistingId);
+
+            mockMvc.perform(post("/api/v1/admin/users/{id}/reset-password", nonExistingId)
+                            .with(user(adminUser)))
+                    .andExpect(status().isNotFound())
+                    .andExpect(jsonPath("$.error.code").value(404));
+        }
+    }
+
+    @Nested
+    @DisplayName("GET /api/v1/admin/stats")
+    class GetDashboardStatsTests {
+
+        @Test
+        @DisplayName("should return dashboard statistics")
+        void getDashboardStats_returnsOk() throws Exception {
+            AdminDashboardStats stats = new AdminDashboardStats(
+                    100L, 80L, 10L, 5L, 10.0,
+                    Map.of("2026-01", 20L, "2026-02", 15L),
+                    List.of(new AdminDashboardStats.UserStat("top@test.com", 5L)),
+                    List.of(new AdminDashboardStats.UserStat("top@test.com", 25L)));
+
+            when(userService.getAdminDashboardStats()).thenReturn(stats);
+
+            mockMvc.perform(get("/api/v1/admin/stats")
+                            .with(user(adminUser)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.data.totalUsers").value(100))
+                    .andExpect(jsonPath("$.data.activeUsers").value(80))
+                    .andExpect(jsonPath("$.data.premiumUsers").value(10))
+                    .andExpect(jsonPath("$.data.adminUsers").value(5))
+                    .andExpect(jsonPath("$.data.premiumConversionRate").value(10.0))
+                    .andExpect(jsonPath("$.data.topUsersByLists[0].email").value("top@test.com"));
+        }
+    }
+
+    @Nested
+    @DisplayName("GET /api/v1/admin/lists")
+    class GetAllListsTests {
+
+        @Test
+        @DisplayName("should return paginated list of item lists")
+        @SuppressWarnings("unchecked")
+        void getAllLists_returnsOkWithPageResponse() throws Exception {
+            ItemList list = new ItemList();
+            list.setId(UUID.randomUUID());
+            list.setName("Test List");
+            list.setCategory("Electronics");
+            list.setUser(testUser);
+            list.setCreatedAt(LocalDateTime.now());
+
+            when(itemListRepository.findAll(any(Pageable.class)))
+                    .thenReturn(new PageImpl<>(List.of(list)));
+
+            mockMvc.perform(get("/api/v1/admin/lists")
+                            .with(user(adminUser)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.data.content").isArray())
+                    .andExpect(jsonPath("$.data.content[0].name").value("Test List"))
+                    .andExpect(jsonPath("$.data.totalElements").value(1));
+        }
+
+        @Test
+        @DisplayName("should filter lists by search criteria")
+        @SuppressWarnings("unchecked")
+        void getAllLists_withFilters_returnsFilteredResults() throws Exception {
+            when(itemListRepository.findAll(any(Specification.class), any(Pageable.class)))
+                    .thenReturn(new PageImpl<>(List.of()));
+
+            mockMvc.perform(get("/api/v1/admin/lists")
+                            .param("search", "test")
+                            .param("category", "Electronics")
+                            .with(user(adminUser)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.data.content").isArray());
+        }
+    }
+
+    @Nested
+    @DisplayName("GET /api/v1/admin/lists/{id}")
+    class GetListDetailTests {
+
+        @Test
+        @DisplayName("should return list detail")
+        void getListDetail_existingId_returnsOk() throws Exception {
+            UUID listId = UUID.randomUUID();
+            ItemList list = new ItemList();
+            list.setId(listId);
+            list.setName("Test List");
+            list.setCategory("Electronics");
+            list.setUser(testUser);
+            list.setCreatedAt(LocalDateTime.now());
+
+            when(itemListRepository.findById(listId)).thenReturn(Optional.of(list));
+
+            mockMvc.perform(get("/api/v1/admin/lists/{id}", listId)
+                            .with(user(adminUser)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.data.name").value("Test List"))
+                    .andExpect(jsonPath("$.data.category").value("Electronics"));
+        }
+
+        @Test
+        @DisplayName("should return 404 when list not found")
+        void getListDetail_nonExistingId_returns404() throws Exception {
+            UUID nonExistingId = UUID.randomUUID();
+            when(itemListRepository.findById(nonExistingId)).thenReturn(Optional.empty());
+
+            mockMvc.perform(get("/api/v1/admin/lists/{id}", nonExistingId)
+                            .with(user(adminUser)))
+                    .andExpect(status().isNotFound())
+                    .andExpect(jsonPath("$.error.code").value(404));
+        }
+    }
+
+    @Nested
+    @DisplayName("GET /api/v1/admin/items")
+    class GetAllItemsTests {
+
+        @Test
+        @DisplayName("should return paginated list of items")
+        @SuppressWarnings("unchecked")
+        void getAllItems_returnsOkWithPageResponse() throws Exception {
+            Item item = new Item();
+            item.setId(UUID.randomUUID());
+            item.setName("Test Item");
+            item.setCreatedAt(LocalDateTime.now());
+
+            ItemList list = new ItemList();
+            list.setId(UUID.randomUUID());
+            list.setName("Parent List");
+            list.setUser(testUser);
+            item.setItemList(list);
+
+            when(itemRepository.findAll(any(Specification.class), any(Pageable.class)))
+                    .thenReturn(new PageImpl<>(List.of(item)));
+
+            mockMvc.perform(get("/api/v1/admin/items")
+                            .with(user(adminUser)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.data.content").isArray())
+                    .andExpect(jsonPath("$.data.content[0].name").value("Test Item"))
+                    .andExpect(jsonPath("$.data.totalElements").value(1));
+        }
+
+        @Test
+        @DisplayName("should return 400 for invalid status enum")
+        void getAllItems_invalidStatus_returns400() throws Exception {
+            mockMvc.perform(get("/api/v1/admin/items")
+                            .param("status", "INVALID_STATUS")
+                            .with(user(adminUser)))
+                    .andExpect(status().isBadRequest());
+        }
+
+        @Test
+        @DisplayName("should filter by valid status")
+        @SuppressWarnings("unchecked")
+        void getAllItems_validStatus_returnsFilteredResults() throws Exception {
+            when(itemRepository.findAll(any(Specification.class), any(Pageable.class)))
+                    .thenReturn(new PageImpl<>(List.of()));
+
+            mockMvc.perform(get("/api/v1/admin/items")
+                            .param("status", "AVAILABLE")
+                            .with(user(adminUser)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.data.content").isArray());
+        }
+    }
+
+    @Nested
+    @DisplayName("GET /api/v1/admin/users with search filters")
+    class SearchUsersTests {
+
+        @Test
+        @DisplayName("should use searchUsers when search param is provided")
+        void getAllUsers_withSearch_usesSearchService() throws Exception {
+            when(userService.searchUsers(eq("test"), any(), any(), any(Pageable.class)))
+                    .thenReturn(new PageImpl<>(List.of(testUser)));
+
+            mockMvc.perform(get("/api/v1/admin/users")
+                            .param("search", "test")
+                            .with(user(adminUser)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.data.content[0].email").value("user@test.com"));
+
+            verify(userService).searchUsers(eq("test"), any(), any(), any(Pageable.class));
+        }
+
+        @Test
+        @DisplayName("should use searchUsers when role filter is provided")
+        void getAllUsers_withRoleFilter_usesSearchService() throws Exception {
+            when(userService.searchUsers(any(), eq(Role.ADMIN), any(), any(Pageable.class)))
+                    .thenReturn(new PageImpl<>(List.of()));
+
+            mockMvc.perform(get("/api/v1/admin/users")
+                            .param("role", "ADMIN")
+                            .with(user(adminUser)))
+                    .andExpect(status().isOk());
+
+            verify(userService).searchUsers(any(), eq(Role.ADMIN), any(), any(Pageable.class));
+        }
+
+        @Test
+        @DisplayName("should use searchUsers when enabled filter is provided")
+        void getAllUsers_withEnabledFilter_usesSearchService() throws Exception {
+            when(userService.searchUsers(any(), any(), eq(true), any(Pageable.class)))
+                    .thenReturn(new PageImpl<>(List.of(testUser)));
+
+            mockMvc.perform(get("/api/v1/admin/users")
+                            .param("enabled", "true")
+                            .with(user(adminUser)))
+                    .andExpect(status().isOk());
+
+            verify(userService).searchUsers(any(), any(), eq(true), any(Pageable.class));
         }
     }
 }

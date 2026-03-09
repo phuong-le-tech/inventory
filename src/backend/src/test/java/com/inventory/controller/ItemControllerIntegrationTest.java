@@ -91,7 +91,7 @@ class ItemControllerIntegrationTest {
         @Test
         @DisplayName("should create item and retrieve it")
         void createAndRetrieveItem_fullFlow() throws Exception {
-            ItemRequest request = new ItemRequest("Integration Test Item", testList.getId(), ItemStatus.IN_STOCK, 5, null);
+            ItemRequest request = new ItemRequest("Integration Test Item", testList.getId(), ItemStatus.AVAILABLE, 5, null);
 
             String jsonData = objectMapper.writeValueAsString(request);
 
@@ -100,7 +100,7 @@ class ItemControllerIntegrationTest {
                     .andExpect(status().isCreated())
                     .andExpect(jsonPath("$.data.name").value("Integration Test Item"))
                     .andExpect(jsonPath("$.data.itemListId").value(testList.getId().toString()))
-                    .andExpect(jsonPath("$.data.status").value("IN_STOCK"))
+                    .andExpect(jsonPath("$.data.status").value("AVAILABLE"))
                     .andExpect(jsonPath("$.data.stock").value(5))
                     .andReturn();
 
@@ -118,7 +118,7 @@ class ItemControllerIntegrationTest {
         @Test
         @DisplayName("should create item with image")
         void createItemWithImage_fullFlow() throws Exception {
-            ItemRequest request = new ItemRequest("Item With Image", testList.getId(), ItemStatus.IN_STOCK, 10, null);
+            ItemRequest request = new ItemRequest("Item With Image", testList.getId(), ItemStatus.AVAILABLE, 10, null);
 
             String jsonData = objectMapper.writeValueAsString(request);
             // JPEG magic bytes (FF D8 FF) followed by dummy data
@@ -147,9 +147,9 @@ class ItemControllerIntegrationTest {
         @Test
         @DisplayName("should update existing item")
         void updateItem_fullFlow() throws Exception {
-            Item item = createTestItem("Original Name", testList, ItemStatus.IN_STOCK, 5);
+            Item item = createTestItem("Original Name", testList, ItemStatus.AVAILABLE, 5);
 
-            ItemRequest updateRequest = new ItemRequest("Updated Name", testList.getId(), ItemStatus.LOW_STOCK, 15, null);
+            ItemRequest updateRequest = new ItemRequest("Updated Name", testList.getId(), ItemStatus.TO_VERIFY, 15, null);
             String jsonData = objectMapper.writeValueAsString(updateRequest);
 
             mockMvc.perform(multipart("/api/v1/items/{id}", item.getId())
@@ -160,12 +160,12 @@ class ItemControllerIntegrationTest {
                             }))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.data.name").value("Updated Name"))
-                    .andExpect(jsonPath("$.data.status").value("LOW_STOCK"))
+                    .andExpect(jsonPath("$.data.status").value("TO_VERIFY"))
                     .andExpect(jsonPath("$.data.stock").value(15));
 
             Item updatedItem = itemRepository.findById(item.getId()).orElseThrow();
             assertThat(updatedItem.getName()).isEqualTo("Updated Name");
-            assertThat(updatedItem.getStatus()).isEqualTo(ItemStatus.LOW_STOCK);
+            assertThat(updatedItem.getStatus()).isEqualTo(ItemStatus.TO_VERIFY);
             assertThat(updatedItem.getStock()).isEqualTo(15);
         }
     }
@@ -177,7 +177,7 @@ class ItemControllerIntegrationTest {
         @Test
         @DisplayName("should delete existing item")
         void deleteItem_fullFlow() throws Exception {
-            Item testItem = createTestItem("Test Item", testList, ItemStatus.IN_STOCK, 10);
+            Item testItem = createTestItem("Test Item", testList, ItemStatus.AVAILABLE, 10);
 
             assertThat(itemRepository.count()).isEqualTo(1);
 
@@ -204,15 +204,15 @@ class ItemControllerIntegrationTest {
         @Test
         @DisplayName("should filter items by status")
         void searchItems_byStatus() throws Exception {
-            createTestItem("Item 1", testList, ItemStatus.IN_STOCK, 5);
-            createTestItem("Item 2", testList, ItemStatus.LOW_STOCK, 10);
-            createTestItem("Item 3", testList, ItemStatus.IN_STOCK, 3);
+            createTestItem("Item 1", testList, ItemStatus.AVAILABLE, 5);
+            createTestItem("Item 2", testList, ItemStatus.TO_VERIFY, 10);
+            createTestItem("Item 3", testList, ItemStatus.AVAILABLE, 3);
 
             mockMvc.perform(get("/api/v1/items")
-                            .param("status", "IN_STOCK"))
+                            .param("status", "AVAILABLE"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.data.totalElements").value(2))
-                    .andExpect(jsonPath("$.data.content[0].status").value("IN_STOCK"));
+                    .andExpect(jsonPath("$.data.content[0].status").value("AVAILABLE"));
         }
 
         @Test
@@ -224,9 +224,9 @@ class ItemControllerIntegrationTest {
             anotherList.setUser(testUser);
             anotherList = itemListRepository.save(anotherList);
 
-            createTestItem("Item 1", testList, ItemStatus.IN_STOCK, 5);
-            createTestItem("Item 2", testList, ItemStatus.LOW_STOCK, 10);
-            createTestItem("Item 3", anotherList, ItemStatus.IN_STOCK, 3);
+            createTestItem("Item 1", testList, ItemStatus.AVAILABLE, 5);
+            createTestItem("Item 2", testList, ItemStatus.TO_VERIFY, 10);
+            createTestItem("Item 3", anotherList, ItemStatus.AVAILABLE, 3);
 
             mockMvc.perform(get("/api/v1/items")
                             .param("itemListId", testList.getId().toString()))
@@ -237,9 +237,9 @@ class ItemControllerIntegrationTest {
         @Test
         @DisplayName("should search items by name")
         void searchItems_bySearch() throws Exception {
-            createTestItem("Laptop", testList, ItemStatus.IN_STOCK, 5);
-            createTestItem("Phone", testList, ItemStatus.IN_STOCK, 10);
-            createTestItem("T-Shirt", testList, ItemStatus.IN_STOCK, 20);
+            createTestItem("Laptop", testList, ItemStatus.AVAILABLE, 5);
+            createTestItem("Phone", testList, ItemStatus.AVAILABLE, 10);
+            createTestItem("T-Shirt", testList, ItemStatus.AVAILABLE, 20);
 
             mockMvc.perform(get("/api/v1/items")
                             .param("search", "Laptop"))
@@ -262,15 +262,15 @@ class ItemControllerIntegrationTest {
             clothingList.setUser(testUser);
             clothingList = itemListRepository.save(clothingList);
 
-            createTestItem("Item 1", testList, ItemStatus.IN_STOCK, 5);
-            createTestItem("Item 2", testList, ItemStatus.LOW_STOCK, 10);
-            createTestItem("Item 3", clothingList, ItemStatus.IN_STOCK, 3);
-            createTestItem("Item 4", clothingList, ItemStatus.OUT_OF_STOCK, 0);
+            createTestItem("Item 1", testList, ItemStatus.AVAILABLE, 5);
+            createTestItem("Item 2", testList, ItemStatus.TO_VERIFY, 10);
+            createTestItem("Item 3", clothingList, ItemStatus.AVAILABLE, 3);
+            createTestItem("Item 4", clothingList, ItemStatus.DAMAGED, 0);
 
             mockMvc.perform(get("/api/v1/items/stats"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.data.totalItems").value(4))
-                    .andExpect(jsonPath("$.data.countByStatus.OUT_OF_STOCK").value(1))
+                    .andExpect(jsonPath("$.data.countByStatus.DAMAGED").value(1))
                     .andExpect(jsonPath("$.data.countByCategory.Electronics").value(2))
                     .andExpect(jsonPath("$.data.countByCategory.Clothing").value(2));
         }

@@ -83,7 +83,7 @@ class ItemControllerTest {
         testItem.setId(testId);
         testItem.setName("Test Item");
         testItem.setItemList(testList);
-        testItem.setStatus(ItemStatus.IN_STOCK);
+        testItem.setStatus(ItemStatus.AVAILABLE);
         testItem.setStock(10);
 
         when(uploadRateLimiter.tryAcquire(anyString()))
@@ -186,7 +186,7 @@ class ItemControllerTest {
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.data.id").value(testId.toString()))
                     .andExpect(jsonPath("$.data.name").value("Test Item"))
-                    .andExpect(jsonPath("$.data.status").value("IN_STOCK"));
+                    .andExpect(jsonPath("$.data.status").value("AVAILABLE"));
         }
 
         @Test
@@ -260,7 +260,7 @@ class ItemControllerTest {
         @Test
         @DisplayName("should create item with valid request")
         void createItem_validRequest_returns201() throws Exception {
-            ItemRequest request = new ItemRequest("New Item", testListId, ItemStatus.IN_STOCK, 5, null);
+            ItemRequest request = new ItemRequest("New Item", testListId, ItemStatus.AVAILABLE, 5, null);
             when(itemService.createItem(any(ItemRequest.class), any())).thenReturn(testItem);
 
             String jsonData = objectMapper.writeValueAsString(request);
@@ -278,7 +278,7 @@ class ItemControllerTest {
             when(uploadRateLimiter.tryAcquire(anyString()))
                     .thenReturn(new ApiRateLimiter.RateLimitResult(false, 0));
 
-            ItemRequest request = new ItemRequest("New Item", testListId, ItemStatus.IN_STOCK, 5, null);
+            ItemRequest request = new ItemRequest("New Item", testListId, ItemStatus.AVAILABLE, 5, null);
             String jsonData = objectMapper.writeValueAsString(request);
 
             mockMvc.perform(multipart("/api/v1/items")
@@ -302,7 +302,7 @@ class ItemControllerTest {
         @Test
         @DisplayName("should create item with image")
         void createItem_withImage_returns201() throws Exception {
-            ItemRequest request = new ItemRequest("New Item", testListId, ItemStatus.IN_STOCK, 10, null);
+            ItemRequest request = new ItemRequest("New Item", testListId, ItemStatus.AVAILABLE, 10, null);
             when(itemService.createItem(any(ItemRequest.class), any())).thenReturn(testItem);
 
             String jsonData = objectMapper.writeValueAsString(request);
@@ -324,12 +324,12 @@ class ItemControllerTest {
         @Test
         @DisplayName("should update existing item")
         void updateItem_existingId_returnsUpdatedItem() throws Exception {
-            ItemRequest request = new ItemRequest("Updated Item", testListId, ItemStatus.LOW_STOCK, 20, null);
+            ItemRequest request = new ItemRequest("Updated Item", testListId, ItemStatus.TO_VERIFY, 20, null);
             Item updatedItem = new Item();
             updatedItem.setId(testId);
             updatedItem.setName("Updated Item");
             updatedItem.setItemList(testList);
-            updatedItem.setStatus(ItemStatus.LOW_STOCK);
+            updatedItem.setStatus(ItemStatus.TO_VERIFY);
             updatedItem.setStock(20);
 
             when(itemService.updateItem(eq(testId), any(ItemRequest.class), any())).thenReturn(updatedItem);
@@ -345,7 +345,7 @@ class ItemControllerTest {
                             }))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.data.name").value("Updated Item"))
-                    .andExpect(jsonPath("$.data.status").value("LOW_STOCK"));
+                    .andExpect(jsonPath("$.data.status").value("TO_VERIFY"));
         }
 
         @Test
@@ -354,7 +354,7 @@ class ItemControllerTest {
             when(uploadRateLimiter.tryAcquire(anyString()))
                     .thenReturn(new ApiRateLimiter.RateLimitResult(false, 0));
 
-            ItemRequest request = new ItemRequest("Updated Item", testListId, ItemStatus.LOW_STOCK, 20, null);
+            ItemRequest request = new ItemRequest("Updated Item", testListId, ItemStatus.TO_VERIFY, 20, null);
             String jsonData = objectMapper.writeValueAsString(request);
 
             mockMvc.perform(multipart("/api/v1/items/{id}", testId)
@@ -418,7 +418,7 @@ class ItemControllerTest {
         void getDashboardStats_returnsStats() throws Exception {
             DashboardStats stats = new DashboardStats(
                     10L, 100L, 2L, 1L,
-                    Map.of("IN_STOCK", 5L, "LOW_STOCK", 3L, "OUT_OF_STOCK", 2L),
+                    Map.of("AVAILABLE", 5L, "TO_VERIFY", 3L, "DAMAGED", 2L),
                     Map.of("Electronics", 6L, "Clothing", 4L),
                     List.of(), List.of()
             );
@@ -428,7 +428,7 @@ class ItemControllerTest {
                             .with(user(new CustomUserDetails(UUID.randomUUID(), "test@test.com", "USER"))))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.data.totalItems").value(10))
-                    .andExpect(jsonPath("$.data.countByStatus.IN_STOCK").value(5))
+                    .andExpect(jsonPath("$.data.countByStatus.AVAILABLE").value(5))
                     .andExpect(jsonPath("$.data.countByCategory.Electronics").value(6));
         }
     }

@@ -34,7 +34,6 @@ import com.inventory.exception.UnauthorizedException;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
@@ -90,7 +89,7 @@ class ItemServiceImplTest {
         testItem.setId(testId);
         testItem.setName("Test Item");
         testItem.setItemList(testList);
-        testItem.setStatus(ItemStatus.IN_STOCK);
+        testItem.setStatus(ItemStatus.AVAILABLE);
         testItem.setStock(10);
     }
 
@@ -218,7 +217,7 @@ class ItemServiceImplTest {
         @Test
         @DisplayName("should create item with valid request")
         void createItem_validRequest_createsItem() throws IOException {
-            ItemRequest request = new ItemRequest("New Item", testListId, ItemStatus.IN_STOCK, 5, null);
+            ItemRequest request = new ItemRequest("New Item", testListId, ItemStatus.AVAILABLE, 5, null);
             when(securityUtils.isAdmin()).thenReturn(true);
             when(itemListRepository.findById(testListId)).thenReturn(Optional.of(testList));
             when(itemRepository.save(any(Item.class))).thenAnswer(invocation -> {
@@ -231,7 +230,7 @@ class ItemServiceImplTest {
 
             assertThat(result.getName()).isEqualTo("New Item");
             assertThat(result.getItemList()).isEqualTo(testList);
-            assertThat(result.getStatus()).isEqualTo(ItemStatus.IN_STOCK);
+            assertThat(result.getStatus()).isEqualTo(ItemStatus.AVAILABLE);
             assertThat(result.getStock()).isEqualTo(5);
             verify(itemRepository).save(any(Item.class));
         }
@@ -246,7 +245,7 @@ class ItemServiceImplTest {
 
             Item result = itemService.createItem(request, null);
 
-            assertThat(result.getStatus()).isEqualTo(ItemStatus.IN_STOCK);
+            assertThat(result.getStatus()).isEqualTo(ItemStatus.AVAILABLE);
             assertThat(result.getStock()).isEqualTo(0);
         }
 
@@ -254,7 +253,7 @@ class ItemServiceImplTest {
         @DisplayName("should throw exception when list not found")
         void createItem_listNotFound_throwsException() {
             UUID nonExistingListId = UUID.randomUUID();
-            ItemRequest request = new ItemRequest("New Item", nonExistingListId, ItemStatus.IN_STOCK, 5, null);
+            ItemRequest request = new ItemRequest("New Item", nonExistingListId, ItemStatus.AVAILABLE, 5, null);
             when(itemListRepository.findById(nonExistingListId)).thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> itemService.createItem(request, null))
@@ -264,7 +263,7 @@ class ItemServiceImplTest {
         @Test
         @DisplayName("should store image data when provided")
         void createItem_withImage_storesImageData() throws IOException {
-            ItemRequest request = new ItemRequest("New Item", testListId, ItemStatus.OUT_OF_STOCK, 10, null);
+            ItemRequest request = new ItemRequest("New Item", testListId, ItemStatus.DAMAGED, 10, null);
             // JPEG magic bytes (FF D8 FF) followed by dummy data
             byte[] jpegBytes = new byte[]{(byte) 0xFF, (byte) 0xD8, (byte) 0xFF, (byte) 0xE0, 0, 0, 0, 0, 0, 0, 0, 0};
             MockMultipartFile image = new MockMultipartFile(
@@ -284,7 +283,7 @@ class ItemServiceImplTest {
         @Test
         @DisplayName("should create item with PNG image")
         void createItem_withPngImage_storesImageData() throws IOException {
-            ItemRequest request = new ItemRequest("PNG Item", testListId, ItemStatus.IN_STOCK, 1, null);
+            ItemRequest request = new ItemRequest("PNG Item", testListId, ItemStatus.AVAILABLE, 1, null);
             byte[] pngBytes = new byte[]{(byte) 0x89, 0x50, 0x4E, 0x47, 0, 0, 0, 0, 0, 0, 0, 0};
             MockMultipartFile image = new MockMultipartFile("image", "test.png", "image/png", pngBytes);
 
@@ -300,7 +299,7 @@ class ItemServiceImplTest {
         @Test
         @DisplayName("should create item with GIF image")
         void createItem_withGifImage_storesImageData() throws IOException {
-            ItemRequest request = new ItemRequest("GIF Item", testListId, ItemStatus.IN_STOCK, 1, null);
+            ItemRequest request = new ItemRequest("GIF Item", testListId, ItemStatus.AVAILABLE, 1, null);
             byte[] gifBytes = new byte[]{0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 0, 0, 0, 0, 0, 0};
             MockMultipartFile image = new MockMultipartFile("image", "test.gif", "image/gif", gifBytes);
 
@@ -316,7 +315,7 @@ class ItemServiceImplTest {
         @Test
         @DisplayName("should create item with WebP image")
         void createItem_withWebpImage_storesImageData() throws IOException {
-            ItemRequest request = new ItemRequest("WebP Item", testListId, ItemStatus.IN_STOCK, 1, null);
+            ItemRequest request = new ItemRequest("WebP Item", testListId, ItemStatus.AVAILABLE, 1, null);
             // RIFF....WEBP
             byte[] webpBytes = new byte[]{0x52, 0x49, 0x46, 0x46, 0, 0, 0, 0, 0x57, 0x45, 0x42, 0x50};
             MockMultipartFile image = new MockMultipartFile("image", "test.webp", "image/webp", webpBytes);
@@ -333,7 +332,7 @@ class ItemServiceImplTest {
         @Test
         @DisplayName("should throw exception for file too large")
         void createItem_fileTooLarge_throwsException() {
-            ItemRequest request = new ItemRequest("Item", testListId, ItemStatus.IN_STOCK, 1, null);
+            ItemRequest request = new ItemRequest("Item", testListId, ItemStatus.AVAILABLE, 1, null);
             byte[] largeFile = new byte[10 * 1024 * 1024 + 1]; // just over 10MB
             largeFile[0] = (byte) 0xFF;
             largeFile[1] = (byte) 0xD8;
@@ -351,7 +350,7 @@ class ItemServiceImplTest {
         @Test
         @DisplayName("should throw exception for invalid file type")
         void createItem_invalidFileType_throwsException() {
-            ItemRequest request = new ItemRequest("Item", testListId, ItemStatus.IN_STOCK, 1, null);
+            ItemRequest request = new ItemRequest("Item", testListId, ItemStatus.AVAILABLE, 1, null);
             byte[] invalidBytes = new byte[]{0x25, 0x50, 0x44, 0x46, 0, 0, 0, 0, 0, 0, 0, 0}; // PDF magic
             MockMultipartFile image = new MockMultipartFile("image", "test.pdf", "application/pdf", invalidBytes);
 
@@ -366,7 +365,7 @@ class ItemServiceImplTest {
         @Test
         @DisplayName("should throw exception for file too small to detect type")
         void createItem_fileTooSmall_throwsException() {
-            ItemRequest request = new ItemRequest("Item", testListId, ItemStatus.IN_STOCK, 1, null);
+            ItemRequest request = new ItemRequest("Item", testListId, ItemStatus.AVAILABLE, 1, null);
             byte[] tinyBytes = new byte[]{0x01, 0x02};
             MockMultipartFile image = new MockMultipartFile("image", "tiny.bin", "application/octet-stream", tinyBytes);
 
@@ -382,7 +381,7 @@ class ItemServiceImplTest {
         @DisplayName("should throw when non-owner creates item in another user's list")
         void createItem_nonOwner_throwsException() {
             UUID otherUserId = UUID.randomUUID();
-            ItemRequest request = new ItemRequest("New Item", testListId, ItemStatus.IN_STOCK, 5, null);
+            ItemRequest request = new ItemRequest("New Item", testListId, ItemStatus.AVAILABLE, 5, null);
 
             when(itemListRepository.findById(testListId)).thenReturn(Optional.of(testList));
             when(securityUtils.isAdmin()).thenReturn(false);
@@ -395,7 +394,7 @@ class ItemServiceImplTest {
         @Test
         @DisplayName("should create item as owner (non-admin)")
         void createItem_asOwner_createsItem() throws IOException {
-            ItemRequest request = new ItemRequest("Owner Item", testListId, ItemStatus.IN_STOCK, 3, null);
+            ItemRequest request = new ItemRequest("Owner Item", testListId, ItemStatus.AVAILABLE, 3, null);
 
             when(itemListRepository.findById(testListId)).thenReturn(Optional.of(testList));
             when(securityUtils.isAdmin()).thenReturn(false);
@@ -415,7 +414,7 @@ class ItemServiceImplTest {
         @Test
         @DisplayName("should update existing item")
         void updateItem_existingId_updatesItem() throws IOException {
-            ItemRequest request = new ItemRequest("Updated Name", testListId, ItemStatus.LOW_STOCK, 20, null);
+            ItemRequest request = new ItemRequest("Updated Name", testListId, ItemStatus.TO_VERIFY, 20, null);
             when(securityUtils.isAdmin()).thenReturn(true);
             when(itemRepository.findById(testId)).thenReturn(Optional.of(testItem));
             when(itemListRepository.findById(testListId)).thenReturn(Optional.of(testList));
@@ -425,14 +424,14 @@ class ItemServiceImplTest {
 
             assertThat(result.getName()).isEqualTo("Updated Name");
             assertThat(result.getItemList()).isEqualTo(testList);
-            assertThat(result.getStatus()).isEqualTo(ItemStatus.LOW_STOCK);
+            assertThat(result.getStatus()).isEqualTo(ItemStatus.TO_VERIFY);
             assertThat(result.getStock()).isEqualTo(20);
         }
 
         @Test
         @DisplayName("should keep existing status when not provided in request")
         void updateItem_noStatus_keepsExistingStatus() throws IOException {
-            testItem.setStatus(ItemStatus.OUT_OF_STOCK);
+            testItem.setStatus(ItemStatus.DAMAGED);
             ItemRequest request = new ItemRequest("Updated Name", testListId, null, null, null);
             when(securityUtils.isAdmin()).thenReturn(true);
             when(itemRepository.findById(testId)).thenReturn(Optional.of(testItem));
@@ -441,13 +440,13 @@ class ItemServiceImplTest {
 
             Item result = itemService.updateItem(testId, request, null);
 
-            assertThat(result.getStatus()).isEqualTo(ItemStatus.OUT_OF_STOCK);
+            assertThat(result.getStatus()).isEqualTo(ItemStatus.DAMAGED);
         }
 
         @Test
         @DisplayName("should update item with image")
         void updateItem_withImage_updatesImageData() throws IOException {
-            ItemRequest request = new ItemRequest("Updated", testListId, ItemStatus.IN_STOCK, 5, null);
+            ItemRequest request = new ItemRequest("Updated", testListId, ItemStatus.AVAILABLE, 5, null);
             byte[] pngBytes = new byte[]{(byte) 0x89, 0x50, 0x4E, 0x47, 0, 0, 0, 0, 0, 0, 0, 0};
             MockMultipartFile image = new MockMultipartFile("image", "test.png", "image/png", pngBytes);
 
@@ -466,7 +465,7 @@ class ItemServiceImplTest {
         @DisplayName("should throw when item not found")
         void updateItem_notFound_throwsException() {
             UUID nonExistingId = UUID.randomUUID();
-            ItemRequest request = new ItemRequest("Updated", testListId, ItemStatus.IN_STOCK, 5, null);
+            ItemRequest request = new ItemRequest("Updated", testListId, ItemStatus.AVAILABLE, 5, null);
 
             when(itemRepository.findById(nonExistingId)).thenReturn(Optional.empty());
 
@@ -537,14 +536,13 @@ class ItemServiceImplTest {
             when(securityUtils.isAdmin()).thenReturn(true);
             when(itemRepository.count()).thenReturn(10L);
             when(itemRepository.sumStock()).thenReturn(100L);
-            when(itemRepository.countLowStock(5)).thenReturn(2L);
-            when(itemRepository.countOutOfStock()).thenReturn(1L);
             when(itemRepository.getListsOverview()).thenReturn(List.of());
             when(itemRepository.findTop5ByOrderByUpdatedAtDesc()).thenReturn(List.of());
             when(itemRepository.countByStatus()).thenReturn(List.of(
-                    new Object[]{ItemStatus.IN_STOCK, 5L},
-                    new Object[]{ItemStatus.LOW_STOCK, 3L},
-                    new Object[]{ItemStatus.OUT_OF_STOCK, 2L}
+                    new Object[]{ItemStatus.AVAILABLE, 5L},
+                    new Object[]{ItemStatus.TO_VERIFY, 3L},
+                    new Object[]{ItemStatus.NEEDS_MAINTENANCE, 1L},
+                    new Object[]{ItemStatus.DAMAGED, 1L}
             ));
             when(itemRepository.countByCategory()).thenReturn(List.of(
                     new Object[]{"Electronics", 6L},
@@ -555,10 +553,10 @@ class ItemServiceImplTest {
 
             assertThat(stats.totalItems()).isEqualTo(10L);
             assertThat(stats.totalQuantity()).isEqualTo(100L);
-            assertThat(stats.lowStockCount()).isEqualTo(2L);
-            assertThat(stats.outOfStockCount()).isEqualTo(1L);
-            assertThat(stats.countByStatus()).containsEntry("IN_STOCK", 5L);
-            assertThat(stats.countByStatus()).containsEntry("LOW_STOCK", 3L);
+            assertThat(stats.toVerifyCount()).isEqualTo(3L);
+            assertThat(stats.needsAttentionCount()).isEqualTo(2L);
+            assertThat(stats.countByStatus()).containsEntry("AVAILABLE", 5L);
+            assertThat(stats.countByStatus()).containsEntry("TO_VERIFY", 3L);
             assertThat(stats.countByCategory()).containsEntry("Electronics", 6L);
         }
 
@@ -569,10 +567,8 @@ class ItemServiceImplTest {
             when(securityUtils.getCurrentUserId()).thenReturn(Optional.of(testUserId));
             when(itemRepository.countByUserId(testUserId)).thenReturn(5L);
             when(itemRepository.sumStockByUserId(testUserId)).thenReturn(50L);
-            when(itemRepository.countLowStockByUserId(testUserId, 5)).thenReturn(1L);
-            when(itemRepository.countOutOfStockByUserId(testUserId)).thenReturn(0L);
             when(itemRepository.countByStatusAndUserId(testUserId)).thenReturn(
-                    Collections.singletonList(new Object[]{ItemStatus.IN_STOCK, 5L})
+                    Collections.singletonList(new Object[]{ItemStatus.AVAILABLE, 5L})
             );
             when(itemRepository.countByCategoryAndUserId(testUserId)).thenReturn(
                     Collections.singletonList(new Object[]{"Electronics", 3L})
@@ -584,8 +580,8 @@ class ItemServiceImplTest {
 
             assertThat(stats.totalItems()).isEqualTo(5L);
             assertThat(stats.totalQuantity()).isEqualTo(50L);
-            assertThat(stats.lowStockCount()).isEqualTo(1L);
-            assertThat(stats.outOfStockCount()).isEqualTo(0L);
+            assertThat(stats.toVerifyCount()).isEqualTo(0L);
+            assertThat(stats.needsAttentionCount()).isEqualTo(0L);
         }
 
         @Test
@@ -604,8 +600,6 @@ class ItemServiceImplTest {
             when(securityUtils.isAdmin()).thenReturn(true);
             when(itemRepository.count()).thenReturn(1L);
             when(itemRepository.sumStock()).thenReturn(1L);
-            when(itemRepository.countLowStock(5)).thenReturn(0L);
-            when(itemRepository.countOutOfStock()).thenReturn(0L);
             when(itemRepository.getListsOverview()).thenReturn(
                     Collections.singletonList(new Object[]{"My List", 3L, 10L})
             );
@@ -632,7 +626,7 @@ class ItemServiceImplTest {
             itemWithSku.setId(UUID.randomUUID());
             itemWithSku.setName("SKU Item");
             itemWithSku.setItemList(testList);
-            itemWithSku.setStatus(ItemStatus.IN_STOCK);
+            itemWithSku.setStatus(ItemStatus.AVAILABLE);
             itemWithSku.setStock(5);
             itemWithSku.setCustomFieldValues(Map.of("sku", "ABC-123"));
 
@@ -640,15 +634,13 @@ class ItemServiceImplTest {
             itemWithoutSku.setId(UUID.randomUUID());
             itemWithoutSku.setName("No SKU Item");
             itemWithoutSku.setItemList(testList);
-            itemWithoutSku.setStatus(ItemStatus.LOW_STOCK);
+            itemWithoutSku.setStatus(ItemStatus.TO_VERIFY);
             itemWithoutSku.setStock(2);
             itemWithoutSku.setCustomFieldValues(null);
 
             when(securityUtils.isAdmin()).thenReturn(true);
             when(itemRepository.count()).thenReturn(2L);
             when(itemRepository.sumStock()).thenReturn(7L);
-            when(itemRepository.countLowStock(5)).thenReturn(1L);
-            when(itemRepository.countOutOfStock()).thenReturn(0L);
             when(itemRepository.getListsOverview()).thenReturn(List.of());
             when(itemRepository.findTop5ByOrderByUpdatedAtDesc()).thenReturn(List.of(itemWithSku, itemWithoutSku));
             when(itemRepository.countByStatus()).thenReturn(List.of());

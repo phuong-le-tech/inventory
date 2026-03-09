@@ -6,8 +6,8 @@ import java.util.Map;
 public record DashboardStats(
         long totalItems,
         long totalQuantity,
-        long lowStockCount,
-        long outOfStockCount,
+        long toVerifyCount,
+        long needsAttentionCount,
         Map<String, Long> countByStatus,
         Map<String, Long> countByCategory,
         List<ListOverviewDto> listsOverview,

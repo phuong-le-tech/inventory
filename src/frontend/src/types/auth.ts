@@ -35,3 +35,29 @@ export interface CreateUserRequest {
   password: string;
   role?: Role;
 }
+
+export interface AdminDashboardStats {
+  totalUsers: number;
+  activeUsers: number;
+  premiumUsers: number;
+  adminUsers: number;
+  premiumConversionRate: number;
+  registrationTrend: Record<string, number>;
+  topUsersByLists: { email: string; count: number }[];
+  topUsersByItems: { email: string; count: number }[];
+}
+
+export interface AdminUserDetail {
+  id: string;
+  email: string;
+  role: Role;
+  pictureUrl?: string;
+  hasGoogleAccount: boolean;
+  enabled: boolean;
+  listCount: number;
+  itemCount: number;
+  hasStripePayment: boolean;
+  stripeCustomerId?: string;
+  createdAt: string;
+  updatedAt: string;
+}

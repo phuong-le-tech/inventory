@@ -46,9 +46,10 @@ const statusToBadgeVariant: Record<
   ItemStatus,
   "success" | "warning" | "error" | "default"
 > = {
-  IN_STOCK: "success",
-  LOW_STOCK: "warning",
-  OUT_OF_STOCK: "error",
+  AVAILABLE: "success",
+  TO_VERIFY: "warning",
+  NEEDS_MAINTENANCE: "default",
+  DAMAGED: "error",
 };
 
 export default function ListDetail() {

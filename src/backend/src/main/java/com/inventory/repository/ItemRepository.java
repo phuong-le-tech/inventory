@@ -33,19 +33,7 @@ public interface ItemRepository extends JpaRepository<Item, UUID>, JpaSpecificat
     @Query("SELECT COALESCE(SUM(i.stock), 0) FROM Item i WHERE i.itemList.user.id = :userId")
     long sumStockByUserId(UUID userId);
 
-    @Query("SELECT COUNT(i) FROM Item i WHERE i.stock > 0 AND i.stock <= :threshold")
-    long countLowStock(int threshold);
-
-    @Query("SELECT COUNT(i) FROM Item i WHERE i.itemList.user.id = :userId AND i.stock > 0 AND i.stock <= :threshold")
-    long countLowStockByUserId(UUID userId, int threshold);
-
-    @Query("SELECT COUNT(i) FROM Item i WHERE i.stock = 0")
-    long countOutOfStock();
-
-    @Query("SELECT COUNT(i) FROM Item i WHERE i.itemList.user.id = :userId AND i.stock = 0")
-    long countOutOfStockByUserId(UUID userId);
-
-    @Query("SELECT i.itemList.name, COUNT(i), COALESCE(SUM(i.stock), 0) FROM Item i GROUP BY i.itemList.name")
+@Query("SELECT i.itemList.name, COUNT(i), COALESCE(SUM(i.stock), 0) FROM Item i GROUP BY i.itemList.name")
     List<Object[]> getListsOverview();
 
     @Query("SELECT i.itemList.name, COUNT(i), COALESCE(SUM(i.stock), 0) FROM Item i WHERE i.itemList.user.id = :userId GROUP BY i.itemList.name")
@@ -56,4 +44,7 @@ public interface ItemRepository extends JpaRepository<Item, UUID>, JpaSpecificat
 
     @Query("SELECT i FROM Item i JOIN FETCH i.itemList WHERE i.itemList.user.id = :userId ORDER BY i.updatedAt DESC LIMIT 5")
     List<Item> findTop5ByUserIdOrderByUpdatedAtDesc(UUID userId);
+
+    @Query("SELECT i.itemList.user.email, COUNT(i) FROM Item i GROUP BY i.itemList.user.email ORDER BY COUNT(i) DESC LIMIT 5")
+    List<Object[]> findTopUsersByItemCount();
 }

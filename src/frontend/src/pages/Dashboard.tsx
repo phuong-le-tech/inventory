@@ -33,10 +33,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 import ListCombobox from "../components/ListCombobox";
 
-const statusToBadgeVariant: Record<string, "success" | "warning" | "error"> = {
-  IN_STOCK: "success",
-  LOW_STOCK: "warning",
-  OUT_OF_STOCK: "error",
+const statusToBadgeVariant: Record<string, "success" | "warning" | "error" | "default"> = {
+  AVAILABLE: "success",
+  TO_VERIFY: "warning",
+  NEEDS_MAINTENANCE: "default",
+  DAMAGED: "error",
 };
 
 export default function Dashboard() {
@@ -110,16 +111,16 @@ export default function Dashboard() {
       iconColor: "text-muted-foreground",
     },
     {
-      label: "Stock faible",
-      value: stats?.lowStockCount || 0,
-      subtext: "À réapprovisionner",
+      label: "À vérifier",
+      value: stats?.toVerifyCount || 0,
+      subtext: "Articles à contrôler",
       icon: AlertTriangle,
       iconColor: "text-amber-500",
     },
     {
-      label: "Rupture de stock",
-      value: stats?.outOfStockCount || 0,
-      subtext: "Articles indisponibles",
+      label: "Attention requise",
+      value: stats?.needsAttentionCount || 0,
+      subtext: "Maintenance ou endommagé",
       icon: XCircle,
       iconColor: "text-red-500",
     },

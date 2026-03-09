@@ -15,5 +15,10 @@ export const queryKeys = {
   },
   admin: {
     users: (params: object) => ['admin', 'users', params] as const,
+    userDetail: (id: string) => ['admin', 'users', 'detail', id] as const,
+    lists: (params: object) => ['admin', 'lists', params] as const,
+    listDetail: (id: string) => ['admin', 'lists', 'detail', id] as const,
+    stats: () => ['admin', 'stats'] as const,
+    items: (params: object) => ['admin', 'items', params] as const,
   },
 };

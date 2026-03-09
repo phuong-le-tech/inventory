@@ -74,7 +74,7 @@ export default function ItemForm() {
     defaultValues: {
       name: "",
       itemListId: listId || "",
-      status: "IN_STOCK",
+      status: "AVAILABLE",
       stock: 0,
       customFieldValues: {},
     },
@@ -367,7 +367,7 @@ export default function ItemForm() {
                 <Controller
                   name="status"
                   control={control}
-                  defaultValue="IN_STOCK"
+                  defaultValue="AVAILABLE"
                   render={({ field }) => (
                     <Select value={field.value} onValueChange={field.onChange}>
                       <SelectTrigger id="item-status">
