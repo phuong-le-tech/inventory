@@ -112,8 +112,8 @@ export interface RecentItemDto {
 export interface DashboardStats {
   totalItems: number;
   totalQuantity: number;
-  lowStockCount: number;
-  outOfStockCount: number;
+  toVerifyCount: number;
+  needsAttentionCount: number;
   countByStatus: Record<string, number>;
   countByCategory: Record<string, number>;
   listsOverview: ListOverviewDto[];
@@ -128,6 +128,33 @@ export interface PageResponse<T> {
   totalPages: number;
   first: boolean;
   last: boolean;
+}
+
+export interface AdminItemList {
+  id: string;
+  name: string;
+  description?: string;
+  category?: string;
+  itemCount: number;
+  ownerId: string;
+  ownerEmail: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AdminItem {
+  id: string;
+  name: string;
+  status: ItemStatus;
+  stock: number;
+  hasImage: boolean;
+  listId: string;
+  listName: string;
+  ownerId: string;
+  ownerEmail: string;
+  customFieldValues?: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface ItemSearchParams {
@@ -149,17 +176,19 @@ export interface ItemListSearchParams {
 }
 
 export const STATUS_OPTIONS = [
-  "IN_STOCK",
-  "LOW_STOCK",
-  "OUT_OF_STOCK",
+  "AVAILABLE",
+  "TO_VERIFY",
+  "NEEDS_MAINTENANCE",
+  "DAMAGED",
 ] as const;
 
 export type ItemStatus = (typeof STATUS_OPTIONS)[number];
 
 export const STATUS_LABELS: Record<ItemStatus, string> = {
-  IN_STOCK: "En stock",
-  LOW_STOCK: "Stock faible",
-  OUT_OF_STOCK: "Rupture de stock",
+  AVAILABLE: "Disponible",
+  TO_VERIFY: "À vérifier",
+  NEEDS_MAINTENANCE: "Maintenance requise",
+  DAMAGED: "Endommagé",
 };
 
 export const formatStatus = (status: ItemStatus): string => {

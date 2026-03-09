@@ -34,9 +34,10 @@ describe("formatCustomFieldValue", () => {
 
 describe("formatStatus", () => {
   it("maps all known statuses to French labels", () => {
-    expect(formatStatus("IN_STOCK")).toBe("En stock");
-    expect(formatStatus("LOW_STOCK")).toBe("Stock faible");
-    expect(formatStatus("OUT_OF_STOCK")).toBe("Rupture de stock");
+    expect(formatStatus("AVAILABLE")).toBe("Disponible");
+    expect(formatStatus("TO_VERIFY")).toBe("À vérifier");
+    expect(formatStatus("NEEDS_MAINTENANCE")).toBe("Maintenance requise");
+    expect(formatStatus("DAMAGED")).toBe("Endommagé");
   });
 
   it("covers all entries in STATUS_LABELS", () => {

@@ -11,8 +11,8 @@ import {
 export const MOCK_STATS = {
   totalItems: 847,
   totalQuantity: 12_340,
-  lowStockCount: 23,
-  outOfStockCount: 5,
+  toVerifyCount: 23,
+  needsAttentionCount: 5,
 };
 
 export const MOCK_LISTS_OVERVIEW = [
@@ -26,21 +26,21 @@ export const MOCK_RECENT_ITEMS = [
     name: "MacBook Pro 14\"",
     listName: "Electronique",
     quantity: 12,
-    status: "IN_STOCK" as const,
+    status: "AVAILABLE" as const,
     lastUpdated: "2026-03-04T10:30:00",
   },
   {
     name: "Chaise ergonomique",
     listName: "Mobilier",
     quantity: 3,
-    status: "LOW_STOCK" as const,
+    status: "TO_VERIFY" as const,
     lastUpdated: "2026-03-03T14:15:00",
   },
   {
     name: "Cartouches d'encre",
     listName: "Fournitures Bureau",
     quantity: 0,
-    status: "OUT_OF_STOCK" as const,
+    status: "DAMAGED" as const,
     lastUpdated: "2026-03-02T09:45:00",
   },
 ];

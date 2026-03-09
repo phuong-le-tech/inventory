@@ -23,15 +23,17 @@ import {
 } from "./mockData";
 
 const STATUS_LABELS: Record<string, string> = {
-  IN_STOCK: "En stock",
-  LOW_STOCK: "Stock faible",
-  OUT_OF_STOCK: "Rupture de stock",
+  AVAILABLE: "Disponible",
+  TO_VERIFY: "À vérifier",
+  NEEDS_MAINTENANCE: "Maintenance requise",
+  DAMAGED: "Endommagé",
 };
 
 const STATUS_COLORS: Record<string, string> = {
-  IN_STOCK: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-400",
-  LOW_STOCK: "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-400",
-  OUT_OF_STOCK: "bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-400",
+  AVAILABLE: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-400",
+  TO_VERIFY: "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-400",
+  NEEDS_MAINTENANCE: "bg-orange-100 text-orange-700 dark:bg-orange-500/15 dark:text-orange-400",
+  DAMAGED: "bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-400",
 };
 
 const LIST_COLORS = ["bg-blue-500", "bg-emerald-500", "bg-amber-500"];
@@ -56,15 +58,15 @@ const statCards = [
     icon: Inbox,
   },
   {
-    label: "Stock faible",
-    value: MOCK_STATS.lowStockCount,
-    subtext: "A reapprovisionner",
+    label: "A verifier",
+    value: MOCK_STATS.toVerifyCount,
+    subtext: "Articles a controler",
     icon: AlertTriangle,
   },
   {
-    label: "Rupture de stock",
-    value: MOCK_STATS.outOfStockCount,
-    subtext: "Articles indisponibles",
+    label: "Attention requise",
+    value: MOCK_STATS.needsAttentionCount,
+    subtext: "Maintenance ou endommage",
     icon: XCircle,
   },
 ];

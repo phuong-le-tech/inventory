@@ -12,6 +12,10 @@ const ListDetail = lazy(() => import('./pages/ListDetail'));
 const ListForm = lazy(() => import('./pages/ListForm'));
 const ItemForm = lazy(() => import('./pages/ItemForm'));
 const UsersPage = lazy(() => import('./pages/admin/UsersPage').then(m => ({ default: m.UsersPage })));
+const UserDetailPage = lazy(() => import('./pages/admin/UserDetailPage').then(m => ({ default: m.UserDetailPage })));
+const AdminListsPage = lazy(() => import('./pages/admin/AdminListsPage').then(m => ({ default: m.AdminListsPage })));
+const AdminListDetailPage = lazy(() => import('./pages/admin/AdminListDetailPage').then(m => ({ default: m.AdminListDetailPage })));
+const AdminDashboardPage = lazy(() => import('./pages/admin/AdminDashboardPage').then(m => ({ default: m.AdminDashboardPage })));
 const UpgradePage = lazy(() => import('./pages/UpgradePage'));
 const PaymentSuccess = lazy(() => import('./pages/PaymentSuccess'));
 const PaymentCancel = lazy(() => import('./pages/PaymentCancel'));
@@ -53,7 +57,11 @@ export default function App() {
       <Route path="/payment/cancel" element={<ProtectedRoute><Layout><PaymentCancel /></Layout></ProtectedRoute>} />
 
       {/* Admin routes */}
+      <Route path="/admin/stats" element={<ProtectedRoute adminOnly><Layout><AdminDashboardPage /></Layout></ProtectedRoute>} />
       <Route path="/admin/users" element={<ProtectedRoute adminOnly><Layout><UsersPage /></Layout></ProtectedRoute>} />
+      <Route path="/admin/users/:id" element={<ProtectedRoute adminOnly><Layout><UserDetailPage /></Layout></ProtectedRoute>} />
+      <Route path="/admin/lists" element={<ProtectedRoute adminOnly><Layout><AdminListsPage /></Layout></ProtectedRoute>} />
+      <Route path="/admin/lists/:id" element={<ProtectedRoute adminOnly><Layout><AdminListDetailPage /></Layout></ProtectedRoute>} />
 
       {/* Redirect old routes */}
       <Route path="/inventory" element={<Navigate to="/lists" replace />} />

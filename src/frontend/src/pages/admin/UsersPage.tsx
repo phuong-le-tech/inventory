@@ -1,52 +1,73 @@
-import { useState, useEffect } from 'react';
-import { useForm, Controller } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { Plus, Trash2, Shield, User as UserIcon, AlertCircle } from 'lucide-react';
+import { useState, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Plus, Trash2, Shield, Search, X } from 'lucide-react';
 import { motion } from 'motion/react';
-import { createUserSchema, CreateUserFormData } from '../../schemas/auth.schemas';
-import { User } from '../../types/auth';
+import { User, Role } from '../../types/auth';
 import { adminApi } from '../../services/authApi';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '../../lib/queryKeys';
 import { useToast } from '../../components/Toast';
 import ConfirmModal from '../../components/ConfirmModal';
-import { getApiErrorStatus } from '../../utils/errorUtils';
 import { Button } from '@/components/ui/button';
 import { Pagination } from '@/components/Pagination';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { BlurFade } from '@/components/effects/blur-fade';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-
-const PASTEL_COLORS = [
-  'bg-brand',
-  'bg-status-verify',
-  'bg-status-pending',
-  'bg-status-ready',
-  'bg-status-prepare',
-];
-
-function getAvatarColor(email: string): string {
-  let hash = 0;
-  for (let i = 0; i < email.length; i++) {
-    hash = email.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  return PASTEL_COLORS[Math.abs(hash) % PASTEL_COLORS.length];
-}
+import { useDebounce } from '../../hooks/useDebounce';
+import { getAvatarColor } from '../../utils/avatarUtils';
+import { RoleBadge } from '../../components/RoleBadge';
+import { CreateUserModal } from './CreateUserModal';
 
 export function UsersPage() {
+  const navigate = useNavigate();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [page, setPage] = useState(0);
+  const [searchInput, setSearchInput] = useState('');
+  const [roleFilter, setRoleFilter] = useState<string>('ALL');
+  const [enabledFilter, setEnabledFilter] = useState<string>('ALL');
   const { showToast } = useToast();
   const queryClient = useQueryClient();
 
-  const params = { page, size: 20 };
+  const debouncedSearch = useDebounce(searchInput, 300);
+
+  // Reset page when filters change
+  const handleSearchChange = useCallback((value: string) => {
+    setSearchInput(value);
+    setPage(0);
+  }, []);
+
+  const handleRoleFilterChange = useCallback((value: string) => {
+    setRoleFilter(value);
+    setPage(0);
+  }, []);
+
+  const handleEnabledFilterChange = useCallback((value: string) => {
+    setEnabledFilter(value);
+    setPage(0);
+  }, []);
+
+  const hasActiveFilters = debouncedSearch || roleFilter !== 'ALL' || enabledFilter !== 'ALL';
+
+  const clearFilters = () => {
+    setSearchInput('');
+    setRoleFilter('ALL');
+    setEnabledFilter('ALL');
+    setPage(0);
+  };
+
+  const params = {
+    page,
+    size: 20,
+    ...(debouncedSearch && { search: debouncedSearch }),
+    ...(roleFilter !== 'ALL' && { role: roleFilter as Role }),
+    ...(enabledFilter !== 'ALL' && { enabled: enabledFilter === 'ENABLED' }),
+  };
+
   const { data, isLoading: loading } = useQuery({
     queryKey: queryKeys.admin.users(params),
     queryFn: () => adminApi.getUsers(params),
@@ -94,11 +115,17 @@ export function UsersPage() {
           </div>
           <div className="h-10 w-44 bg-muted rounded-lg animate-pulse" />
         </div>
+        <div className="flex gap-3 mb-6">
+          <div className="h-10 flex-1 max-w-sm bg-muted rounded-lg animate-pulse" />
+          <div className="h-10 w-40 bg-muted rounded-lg animate-pulse" />
+          <div className="h-10 w-36 bg-muted rounded-lg animate-pulse" />
+        </div>
         <div className="rounded-xl border bg-card">
           <div className="border-b px-6 py-3 flex gap-4">
             <div className="h-4 w-32 bg-muted rounded animate-pulse" />
             <div className="h-4 w-16 bg-muted rounded animate-pulse" />
             <div className="h-4 w-20 bg-muted rounded animate-pulse" />
+            <div className="h-4 w-16 bg-muted rounded animate-pulse" />
             <div className="h-4 w-16 bg-muted rounded animate-pulse ml-auto" />
           </div>
           {[...Array(5)].map((_, i) => (
@@ -139,12 +166,53 @@ export function UsersPage() {
           </Button>
         </div>
 
+        {/* Search and filters */}
+        <div className="flex flex-col sm:flex-row gap-3 mb-6">
+          <div className="relative flex-1 max-w-sm">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Rechercher par email..."
+              value={searchInput}
+              onChange={(e) => handleSearchChange(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          <Select value={roleFilter} onValueChange={handleRoleFilterChange}>
+            <SelectTrigger className="w-[160px]">
+              <SelectValue placeholder="Rôle" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">Tous les rôles</SelectItem>
+              <SelectItem value="USER">Utilisateur</SelectItem>
+              <SelectItem value="PREMIUM_USER">Premium</SelectItem>
+              <SelectItem value="ADMIN">Administrateur</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={enabledFilter} onValueChange={handleEnabledFilterChange}>
+            <SelectTrigger className="w-[140px]">
+              <SelectValue placeholder="Statut" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">Tous les statuts</SelectItem>
+              <SelectItem value="ENABLED">Actif</SelectItem>
+              <SelectItem value="DISABLED">Désactivé</SelectItem>
+            </SelectContent>
+          </Select>
+          {hasActiveFilters && (
+            <Button variant="ghost" size="sm" onClick={clearFilters} className="h-10 px-3">
+              <X className="w-4 h-4 mr-1" />
+              Effacer
+            </Button>
+          )}
+        </div>
+
         <div className="rounded-xl border bg-card">
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Utilisateur</TableHead>
                 <TableHead>Rôle</TableHead>
+                <TableHead>Statut</TableHead>
                 <TableHead>Créé le</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -156,7 +224,8 @@ export function UsersPage() {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.05, duration: 0.3 }}
-                  className="border-b transition-colors hover:bg-muted/50"
+                  className="border-b transition-colors hover:bg-muted/50 cursor-pointer"
+                  onClick={() => navigate(`/admin/users/${user.id}`)}
                 >
                   <TableCell className="py-5">
                     <div className="flex items-center gap-3">
@@ -170,19 +239,18 @@ export function UsersPage() {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Badge variant={user.role === 'ADMIN' ? 'default' : 'secondary'}>
-                      {user.role === 'ADMIN' ? (
-                        <><Shield className="w-3 h-3 mr-1" />Administrateur</>
-                      ) : (
-                        <><UserIcon className="w-3 h-3 mr-1" />Utilisateur</>
-                      )}
+                    <RoleBadge role={user.role} />
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={user.enabled ? 'secondary' : 'destructive'} className={user.enabled ? 'bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20' : ''}>
+                      {user.enabled ? 'Actif' : 'Désactivé'}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-muted-foreground">
                     {new Date(user.createdAt).toLocaleDateString('fr-FR')}
                   </TableCell>
                   <TableCell>
-                    <div className="flex items-center justify-end gap-1">
+                    <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <Button
@@ -220,7 +288,7 @@ export function UsersPage() {
 
           {users.length === 0 && (
             <div className="text-center py-12 text-muted-foreground">
-              Aucun utilisateur trouvé
+              {hasActiveFilters ? 'Aucun résultat pour ces filtres' : 'Aucun utilisateur trouvé'}
             </div>
           )}
         </div>
@@ -247,130 +315,5 @@ export function UsersPage() {
         />
       </div>
     </TooltipProvider>
-  );
-}
-
-function CreateUserModal({ open, onClose, onCreated }: { open: boolean; onClose: () => void; onCreated: (user: User) => void }) {
-  const [loading, setLoading] = useState(false);
-  const [serverError, setServerError] = useState('');
-
-  const {
-    register,
-    handleSubmit,
-    control,
-    formState: { errors },
-    reset,
-  } = useForm<CreateUserFormData>({
-    resolver: zodResolver(createUserSchema),
-    defaultValues: { role: 'USER' },
-  });
-
-  useEffect(() => {
-    if (open) {
-      reset({ email: '', password: '', role: 'USER' });
-      setServerError('');
-    }
-  }, [open, reset]);
-
-  const onSubmit = async (data: CreateUserFormData) => {
-    setLoading(true);
-    setServerError('');
-    try {
-      const user = await adminApi.createUser(data);
-      onCreated(user);
-    } catch (err: unknown) {
-      const status = getApiErrorStatus(err);
-      setServerError(
-        status === 409
-          ? 'Un utilisateur avec cet email existe déjà'
-          : "Échec de la création de l'utilisateur"
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Créer un utilisateur</DialogTitle>
-        </DialogHeader>
-
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          {serverError && (
-            <div className="bg-destructive/10 border border-destructive/20 rounded-lg px-4 py-3 text-destructive text-sm">
-              {serverError}
-            </div>
-          )}
-
-          <div className="space-y-2">
-            <Label htmlFor="create-user-email">Email</Label>
-            <Input
-              id="create-user-email"
-              type="email"
-              {...register('email')}
-              className={errors.email ? 'border-destructive' : ''}
-              placeholder="utilisateur@exemple.com"
-              aria-invalid={!!errors.email}
-              aria-describedby={errors.email ? 'create-user-email-error' : undefined}
-            />
-            {errors.email && (
-              <p id="create-user-email-error" role="alert" className="text-sm text-destructive flex items-center gap-1.5">
-                <AlertCircle className="h-4 w-4 flex-shrink-0" />
-                {errors.email.message}
-              </p>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="create-user-password">Mot de passe</Label>
-            <Input
-              id="create-user-password"
-              type="password"
-              {...register('password')}
-              className={errors.password ? 'border-destructive' : ''}
-              placeholder="Minimum 6 caractères"
-              aria-invalid={!!errors.password}
-              aria-describedby={errors.password ? 'create-user-password-error' : undefined}
-            />
-            {errors.password && (
-              <p id="create-user-password-error" role="alert" className="text-sm text-destructive flex items-center gap-1.5">
-                <AlertCircle className="h-4 w-4 flex-shrink-0" />
-                {errors.password.message}
-              </p>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="create-user-role">Rôle</Label>
-            <Controller
-              name="role"
-              control={control}
-              render={({ field }) => (
-                <Select value={field.value} onValueChange={field.onChange}>
-                  <SelectTrigger id="create-user-role">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="USER">Utilisateur</SelectItem>
-                    <SelectItem value="ADMIN">Administrateur</SelectItem>
-                  </SelectContent>
-                </Select>
-              )}
-            />
-          </div>
-
-          <DialogFooter className="gap-2 sm:gap-0 pt-4">
-            <Button type="button" variant="outline" onClick={onClose}>
-              Annuler
-            </Button>
-            <Button type="submit" disabled={loading}>
-              {loading ? 'Création...' : 'Créer'}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
   );
 }
