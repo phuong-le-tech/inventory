@@ -82,7 +82,7 @@ export function UserMenu() {
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={handleLogout}>
             <LogOut className="w-4 h-4 mr-2" />
-            Se deconnecter
+            Se déconnecter
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -90,8 +90,9 @@ export function UserMenu() {
       <ConfirmModal
         isOpen={showDeleteModal}
         title="Supprimer votre compte"
-        message="Cette action est irreversible. Toutes vos listes et vos objets seront definitivement supprimes."
-        confirmLabel="Supprimer definitivement"
+        message="Cette action est irréversible. Toutes vos listes et vos objets seront définitivement supprimés."
+        confirmLabel="Supprimer définitivement"
+        requireTyping="SUPPRIMER"
         onConfirm={handleDeleteAccount}
         onCancel={() => setShowDeleteModal(false)}
       />

@@ -6,6 +6,7 @@ import com.inventory.dto.request.LoginRequest;
 import com.inventory.dto.request.ResendVerificationRequest;
 import com.inventory.dto.request.ResetPasswordRequest;
 import com.inventory.dto.request.SignupRequest;
+import com.inventory.dto.request.VerifyEmailRequest;
 import com.inventory.dto.response.AuthResponse;
 import com.inventory.dto.response.UserResponse;
 import com.inventory.exception.RateLimitExceededException;
@@ -22,6 +23,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.HexFormat;
 
 @RestController
 @RequestMapping("/api/v1/auth")
@@ -76,14 +82,14 @@ public class AuthController {
         return ResponseEntity.ok(authService.googleAuth(request, response));
     }
 
-    @GetMapping("/verify")
+    @PostMapping("/verify")
     public ResponseEntity<Void> verifyEmail(
-            @RequestParam String token,
+            @Valid @RequestBody VerifyEmailRequest request,
             HttpServletRequest httpRequest
     ) {
         loginRateLimiter.checkRateLimit(httpRequest);
-        checkTokenRateLimit(token);
-        authService.verifyEmail(token);
+        checkTokenRateLimit(request.token());
+        authService.verifyEmail(request.token());
         return ResponseEntity.ok().build();
     }
 
@@ -119,9 +125,19 @@ public class AuthController {
     }
 
     private void checkTokenRateLimit(String token) {
-        String prefix = token.length() > 8 ? token.substring(0, 8) : token;
-        if (!tokenRateLimiter.tryAcquire("token:" + prefix).allowed()) {
+        String hash = hashToken(token);
+        if (!tokenRateLimiter.tryAcquire("token:" + hash).allowed()) {
             throw new RateLimitExceededException("Too many attempts. Please try again later.");
+        }
+    }
+
+    private static String hashToken(String token) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(token.getBytes(StandardCharsets.UTF_8));
+            return HexFormat.of().formatHex(hash);
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-256 not available", e);
         }
     }
 

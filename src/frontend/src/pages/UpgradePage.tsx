@@ -29,9 +29,9 @@ export default function UpgradePage() {
       if (status === 403) {
         showToast('Les comptes admin ne peuvent pas acheter Premium', 'error');
       } else if (status === 400) {
-        showToast('Vous etes deja un utilisateur Premium', 'error');
+        showToast('Vous êtes déjà un utilisateur Premium', 'error');
       } else {
-        showToast('Erreur lors de la creation de la session de paiement', 'error');
+        showToast('Erreur lors de la création de la session de paiement', 'error');
       }
       setLoading(false);
     }
@@ -47,12 +47,12 @@ export default function UpgradePage() {
         </BlurFade>
         <BlurFade delay={0.2}>
           <h1 className="font-display text-3xl font-semibold tracking-tight mb-2">
-            Vous etes deja Premium
+            Vous êtes déjà Premium
           </h1>
         </BlurFade>
         <BlurFade delay={0.3}>
           <p className="text-muted-foreground mb-6">
-            Vous beneficiez deja de listes illimitees.
+            Vous bénéficiez déjà de listes illimitées.
           </p>
         </BlurFade>
         <BlurFade delay={0.4}>
@@ -70,7 +70,7 @@ export default function UpgradePage() {
             Passez en Premium
           </h1>
           <p className="text-muted-foreground text-lg">
-            Debloquez des listes illimitees avec un paiement unique
+            Débloquez des listes illimitées avec un paiement unique
           </p>
         </div>
       </BlurFade>
@@ -87,15 +87,15 @@ export default function UpgradePage() {
             <ul className="space-y-3 mb-8">
               <li className="flex items-center gap-2 text-sm">
                 <Check className="h-4 w-4 text-muted-foreground" />
-                <span>Jusqu'a 5 listes</span>
+                <span>Jusqu'à 5 listes</span>
               </li>
               <li className="flex items-center gap-2 text-sm">
                 <Check className="h-4 w-4 text-muted-foreground" />
-                <span>Articles illimites par liste</span>
+                <span>Articles illimités par liste</span>
               </li>
               <li className="flex items-center gap-2 text-sm">
                 <Check className="h-4 w-4 text-muted-foreground" />
-                <span>Champs personnalises</span>
+                <span>Champs personnalisés</span>
               </li>
             </ul>
             <Button variant="outline" className="w-full" disabled>
@@ -110,31 +110,31 @@ export default function UpgradePage() {
             <div className="absolute -top-3 left-1/2 -translate-x-1/2">
               <span className="bg-brand text-foreground text-xs font-medium px-3 py-1 rounded-full flex items-center gap-1">
                 <Sparkles className="h-3 w-3" />
-                Recommande
+                Recommandé
               </span>
             </div>
             <h2 className="font-display text-xl font-semibold mb-1">Premium</h2>
-            <p className="text-muted-foreground text-sm mb-6">Pour les utilisateurs avances</p>
+            <p className="text-muted-foreground text-sm mb-6">Pour les utilisateurs avancés</p>
             <div className="text-4xl font-display font-bold mb-1">
               2<span className="text-lg font-normal text-muted-foreground">€</span>
             </div>
-            <p className="text-xs text-muted-foreground mb-6">Paiement unique, a vie</p>
+            <p className="text-xs text-muted-foreground mb-6">Paiement unique, à vie</p>
             <ul className="space-y-3 mb-8">
               <li className="flex items-center gap-2 text-sm">
                 <Check className="h-4 w-4 text-brand-dark" />
-                <span className="font-medium">Listes illimitees</span>
+                <span className="font-medium">Listes illimitées</span>
               </li>
               <li className="flex items-center gap-2 text-sm">
                 <Check className="h-4 w-4 text-brand-dark" />
-                <span>Articles illimites par liste</span>
+                <span>Articles illimités par liste</span>
               </li>
               <li className="flex items-center gap-2 text-sm">
                 <Check className="h-4 w-4 text-brand-dark" />
-                <span>Champs personnalises</span>
+                <span>Champs personnalisés</span>
               </li>
               <li className="flex items-center gap-2 text-sm">
                 <Check className="h-4 w-4 text-brand-dark" />
-                <span>Acces a vie</span>
+                <span>Accès à vie</span>
               </li>
             </ul>
             <Button className="w-full" onClick={handleUpgrade} disabled={loading}>

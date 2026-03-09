@@ -102,8 +102,8 @@ export interface ListOverviewDto {
 export interface RecentItemDto {
   id: string;
   name: string;
+  listId: string;
   listName: string;
-  sku: string | null;
   quantity: number;
   status: string;
   lastUpdated: string;

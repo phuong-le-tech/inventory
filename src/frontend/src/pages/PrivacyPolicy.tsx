@@ -1,39 +1,28 @@
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { motion } from 'motion/react';
-import { DotPattern } from '@/components/effects/dot-pattern';
-import { BlurFade } from '@/components/effects/blur-fade';
+import { Button } from '@/components/ui/button';
 
 export function PrivacyPolicy() {
-  return (
-    <div className="min-h-screen flex relative overflow-hidden bg-background">
-      {/* Left side - decorative */}
-      <div className="hidden lg:flex lg:w-[45%] relative items-center justify-center overflow-hidden">
-        <DotPattern className="opacity-40" width={20} height={20} cr={1} />
-        <BlurFade delay={0.1} duration={0.8} blur="20px">
-          <h1 className="font-display text-[8rem] xl:text-[10rem] font-bold text-foreground/[0.04] select-none leading-none -rotate-3">
-            Priva
-            <br />
-            cy
-          </h1>
-        </BlurFade>
-      </div>
+  const navigate = useNavigate();
 
-      {/* Right side - content */}
-      <div className="flex-1 flex items-start justify-center px-6 lg:px-16 py-12 overflow-y-auto">
+  return (
+    <div className="min-h-screen bg-background">
+      <div className="container max-w-prose mx-auto px-6 py-12">
         <motion.div
-          initial={{ opacity: 0, x: 30 }}
-          animate={{ opacity: 1, x: 0 }}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
-          className="w-full max-w-lg"
         >
-          <Link
-            to="/signup"
-            className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-8"
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate(-1)}
+            className="mb-8 -ml-2"
           >
-            <ArrowLeft className="w-4 h-4" />
+            <ArrowLeft className="w-4 h-4 mr-1.5" />
             Retour
-          </Link>
+          </Button>
 
           <h1 className="font-display text-3xl font-semibold tracking-tight mb-8">
             Politique de confidentialite

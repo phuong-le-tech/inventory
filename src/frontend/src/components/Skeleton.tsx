@@ -33,13 +33,14 @@ export function SkeletonCard() {
 
 export function SkeletonStatCard() {
   return (
-    <div className="rounded-xl border bg-card p-6">
-      <div className="flex items-center">
-        <UISkeleton className="h-12 w-12 rounded-xl" />
-        <div className="ml-4 space-y-2 flex-1">
-          <UISkeleton className="h-3 w-20" />
-          <UISkeleton className="h-8 w-16" />
-        </div>
+    <div className="rounded-xl border bg-card p-5 shadow-sm">
+      <div className="flex items-start justify-between mb-4">
+        <UISkeleton className="h-4 w-24" />
+        <UISkeleton className="h-4 w-4" />
+      </div>
+      <div className="space-y-2">
+        <UISkeleton className="h-9 w-16" />
+        <UISkeleton className="h-3 w-32" />
       </div>
     </div>
   );

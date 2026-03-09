@@ -66,22 +66,22 @@ export function ForgotPassword() {
               </div>
             </BlurFade>
             <BlurFade delay={0.3}>
-              <h1 className="font-display text-4xl font-semibold tracking-tight mb-2">Mot de passe oublie</h1>
+              <h1 className="font-display text-4xl font-semibold tracking-tight mb-2">Mot de passe oublié</h1>
             </BlurFade>
             <BlurFade delay={0.4}>
-              <p className="text-muted-foreground">Entrez votre email pour recevoir un lien de reinitialisation</p>
+              <p className="text-muted-foreground">Entrez votre email pour recevoir un lien de réinitialisation</p>
             </BlurFade>
           </div>
 
           {submitted ? (
             <div className="rounded-2xl border bg-card p-8 shadow-float text-center">
               <Mail className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h2 className="font-display text-xl font-semibold mb-2">Email envoye</h2>
+              <h2 className="font-display text-xl font-semibold mb-2">Email envoyé</h2>
               <p className="text-muted-foreground text-sm mb-6">
-                Si un compte existe avec cet email, vous recevrez un lien de reinitialisation dans quelques instants.
+                Si un compte existe avec cet email, vous recevrez un lien de réinitialisation dans quelques instants.
               </p>
               <Button asChild variant="outline" className="w-full">
-                <Link to="/login">Retour a la connexion</Link>
+                <Link to="/login">Retour à la connexion</Link>
               </Button>
             </div>
           ) : (
@@ -101,9 +101,11 @@ export function ForgotPassword() {
                     {...register('email')}
                     className={errors.email ? 'border-destructive focus-visible:ring-destructive' : ''}
                     placeholder="vous@exemple.com"
+                    aria-invalid={!!errors.email}
+                    aria-describedby={errors.email ? 'email-error' : undefined}
                   />
                   {errors.email && (
-                    <p className="text-sm text-destructive flex items-center gap-1.5">
+                    <p id="email-error" role="alert" className="text-sm text-destructive flex items-center gap-1.5">
                       <AlertCircle className="h-4 w-4 flex-shrink-0" />
                       {errors.email.message}
                     </p>
@@ -134,7 +136,7 @@ export function ForgotPassword() {
 
           <p className="mt-6 text-center text-muted-foreground text-sm">
             <Link to="/login" className="text-foreground font-medium hover:underline">
-              Retour a la connexion
+              Retour à la connexion
             </Link>
           </p>
         </motion.div>

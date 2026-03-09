@@ -1,72 +1,72 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Pencil, Trash2, FolderOpen, Crown } from 'lucide-react';
+import { Plus, Pencil, Trash2, FolderOpen, Crown, Search } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { listsApi } from '../services/api';
-import { ItemList, ItemListSearchParams } from '../types/item';
 import { useAuth } from '../contexts/AuthContext';
 import { SkeletonCard, SkeletonText, Skeleton } from '../components/Skeleton';
 import { useToast } from '../components/Toast';
 import ConfirmModal from '../components/ConfirmModal';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Pagination } from '@/components/Pagination';
 import { Badge } from '@/components/ui/badge';
 import { BlurFade } from '@/components/effects/blur-fade';
 import { SpotlightCard } from '@/components/effects/spotlight-card';
 import { StaggeredList, StaggeredItem } from '@/components/effects/staggered-list';
+import { queryKeys } from '../lib/queryKeys';
 
 // Must match backend ItemListServiceImpl.MAX_FREE_LISTS
 const FREE_LIST_LIMIT = 5;
 
 export default function ListsPage() {
-  const [lists, setLists] = useState<ItemList[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [page, setPage] = useState(0);
-  const [totalPages, setTotalPages] = useState(0);
-  const [totalElements, setTotalElements] = useState(0);
+  const [searchQuery, setSearchQuery] = useState('');
   const { showToast } = useToast();
   const { isPremium } = useAuth();
+  const queryClient = useQueryClient();
 
-  const loadLists = useCallback(async () => {
-    setLoading(true);
-    try {
-      const params: ItemListSearchParams = {
-        page,
-        size: 9,
-        sortBy: 'createdAt',
-        sortDir: 'desc',
-      };
-      const response = await listsApi.getAll(params);
-      setLists(response.content);
-      setTotalPages(response.totalPages);
-      setTotalElements(response.totalElements);
-    } catch {
-      showToast('Echec du chargement des listes', 'error');
-    } finally {
-      setLoading(false);
-    }
-  }, [page, showToast]);
+  const params = { page, size: 9, sortBy: 'createdAt', sortDir: 'desc' as const };
+  const { data, isLoading: loading } = useQuery({
+    queryKey: queryKeys.lists.list(params),
+    queryFn: () => listsApi.getAll(params),
+  });
 
-  useEffect(() => {
-    loadLists();
-  }, [loadLists]);
+  const lists = data?.content ?? [];
+  const totalPages = data?.totalPages ?? 0;
+  const totalElements = data?.totalElements ?? 0;
 
-  const handleDeleteConfirm = async () => {
+  const filteredLists = useMemo(() => {
+    if (!searchQuery.trim()) return lists;
+    const query = searchQuery.toLowerCase();
+    return lists.filter((list) => {
+      return (
+        list.name.toLowerCase().includes(query) ||
+        list.category?.toLowerCase().includes(query) ||
+        list.description?.toLowerCase().includes(query)
+      );
+    });
+  }, [lists, searchQuery]);
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => listsApi.delete(id),
+    onSuccess: () => {
+      showToast('Liste supprimée avec succès', 'success');
+      queryClient.invalidateQueries({ queryKey: queryKeys.lists.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
+    },
+    onError: () => {
+      showToast('Échec de la suppression de la liste', 'error');
+    },
+  });
+
+  const handleDeleteConfirm = () => {
     if (!pendingDeleteId) return;
     const id = pendingDeleteId;
     setPendingDeleteId(null);
-    setDeletingId(id);
-    try {
-      await listsApi.delete(id);
-      showToast('Liste supprimee avec succes', 'success');
-      loadLists();
-    } catch {
-      showToast('Echec de la suppression de la liste', 'error');
-    } finally {
-      setDeletingId(null);
-    }
+    deleteMutation.mutate(id);
   };
 
   if (loading && lists.length === 0) {
@@ -89,14 +89,16 @@ export default function ListsPage() {
   }
 
   return (
-    <div>
+    <div className="max-w-7xl mx-auto">
       <div className="flex justify-between items-start mb-8">
         <div>
           <BlurFade delay={0.1}>
             <h1 className="font-display text-4xl font-semibold tracking-tight">Mes Listes</h1>
           </BlurFade>
           <BlurFade delay={0.2}>
-            <p className="text-muted-foreground mt-1">{totalElements} listes au total</p>
+            <p className="text-muted-foreground mt-1">
+              {searchQuery ? `${filteredLists.length} résultat${filteredLists.length > 1 ? 's' : ''}` : `${totalElements} listes au total`}
+            </p>
           </BlurFade>
         </div>
         <BlurFade delay={0.2}>
@@ -118,6 +120,20 @@ export default function ListsPage() {
         </BlurFade>
       </div>
 
+      {/* Search input */}
+      <BlurFade delay={0.3}>
+        <div className="relative mb-6">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+          <Input
+            type="search"
+            placeholder="Rechercher par nom, catégorie ou description..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+      </BlurFade>
+
       {/* Upgrade banners for free users */}
       {!isPremium && totalElements === FREE_LIST_LIMIT - 1 && (
         <BlurFade delay={0.3}>
@@ -137,7 +153,7 @@ export default function ListsPage() {
             <div>
               <p className="text-sm font-medium text-foreground">Limite atteinte</p>
               <p className="text-sm text-muted-foreground">
-                Passez en Premium pour des listes illimitees — 2€ (paiement unique)
+                Passez en Premium pour des listes illimitées — 2€ (paiement unique)
               </p>
             </div>
             <Button size="sm" asChild>
@@ -152,7 +168,7 @@ export default function ListsPage() {
 
       <StaggeredList className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <AnimatePresence>
-          {lists.map((list) => (
+          {filteredLists.map((list) => (
             <StaggeredItem key={list.id}>
               <SpotlightCard className="group rounded-2xl border bg-card shadow-card transition-all duration-300 hover:shadow-elevated overflow-hidden">
                 <Link to={`/lists/${list.id}`} className="block p-6">
@@ -197,10 +213,10 @@ export default function ListsPage() {
                         e.preventDefault();
                         setPendingDeleteId(list.id);
                       }}
-                      disabled={deletingId === list.id}
+                      disabled={deleteMutation.isPending && deleteMutation.variables === list.id}
                       aria-label={`Supprimer ${list.name}`}
                     >
-                      <Trash2 className={`h-3.5 w-3.5 ${deletingId === list.id ? 'animate-pulse' : ''}`} />
+                      <Trash2 className={`h-3.5 w-3.5 ${deleteMutation.isPending && deleteMutation.variables === list.id ? 'animate-pulse' : ''}`} />
                     </Button>
                   </div>
                 </motion.div>
@@ -210,15 +226,27 @@ export default function ListsPage() {
         </AnimatePresence>
       </StaggeredList>
 
-      {lists.length === 0 && !loading && (
+      {filteredLists.length === 0 && !loading && (
         <div className="text-center py-24 animate-fade-in relative">
           <div className="text-[12rem] font-display font-bold text-muted/30 leading-none select-none">0</div>
           <div className="-mt-16 relative z-10">
-            <FolderOpen className="h-12 w-12 mx-auto mb-3 text-muted-foreground/50" />
-            <p className="text-lg text-muted-foreground mb-4">Aucune liste trouvee.</p>
-            <Button asChild>
-              <Link to="/lists/new">Creer votre premiere liste</Link>
-            </Button>
+            {searchQuery ? (
+              <>
+                <Search className="h-12 w-12 mx-auto mb-3 text-muted-foreground/50" />
+                <p className="text-lg text-muted-foreground mb-4">Aucun résultat pour "{searchQuery}"</p>
+                <Button variant="outline" onClick={() => setSearchQuery('')}>
+                  Effacer la recherche
+                </Button>
+              </>
+            ) : (
+              <>
+                <FolderOpen className="h-12 w-12 mx-auto mb-3 text-muted-foreground/50" />
+                <p className="text-lg text-muted-foreground mb-4">Aucune liste trouvée.</p>
+                <Button asChild>
+                  <Link to="/lists/new">Créer votre première liste</Link>
+                </Button>
+              </>
+            )}
           </div>
         </div>
       )}
@@ -228,7 +256,7 @@ export default function ListsPage() {
       <ConfirmModal
         isOpen={pendingDeleteId !== null}
         title="Supprimer la liste"
-        message="Etes-vous sur de vouloir supprimer cette liste et tous ses articles ? Cette action est irreversible."
+        message="Êtes-vous sûr de vouloir supprimer cette liste et tous ses articles ? Cette action est irréversible."
         confirmLabel="Supprimer"
         onConfirm={handleDeleteConfirm}
         onCancel={() => setPendingDeleteId(null)}

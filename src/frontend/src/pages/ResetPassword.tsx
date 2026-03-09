@@ -34,7 +34,7 @@ export function ResetPassword() {
       await authApi.resetPassword(token, data.password);
       navigate('/login?reset=true', { replace: true });
     } catch (err: unknown) {
-      setServerError(getApiErrorMessage(err, 'Le lien est invalide ou a expire'));
+      setServerError(getApiErrorMessage(err, 'Le lien est invalide ou a expiré'));
     } finally {
       setLoading(false);
     }
@@ -45,7 +45,7 @@ export function ResetPassword() {
       <div className="min-h-screen flex items-center justify-center bg-background px-6">
         <div className="text-center">
           <h2 className="font-display text-2xl font-semibold mb-2">Lien invalide</h2>
-          <p className="text-muted-foreground mb-6">Ce lien de reinitialisation est invalide.</p>
+          <p className="text-muted-foreground mb-6">Ce lien de réinitialisation est invalide.</p>
           <Button asChild>
             <Link to="/forgot-password">Demander un nouveau lien</Link>
           </Button>
@@ -108,10 +108,12 @@ export function ResetPassword() {
                   type="password"
                   {...register('password')}
                   className={errors.password ? 'border-destructive focus-visible:ring-destructive' : ''}
-                  placeholder="Minimum 12 caracteres"
+                  placeholder="Minimum 12 caractères"
+                  aria-invalid={!!errors.password}
+                  aria-describedby={errors.password ? 'password-error' : undefined}
                 />
                 {errors.password && (
-                  <p className="text-sm text-destructive flex items-center gap-1.5">
+                  <p id="password-error" role="alert" className="text-sm text-destructive flex items-center gap-1.5">
                     <AlertCircle className="h-4 w-4 flex-shrink-0" />
                     {errors.password.message}
                   </p>
@@ -126,9 +128,11 @@ export function ResetPassword() {
                   {...register('confirmPassword')}
                   className={errors.confirmPassword ? 'border-destructive focus-visible:ring-destructive' : ''}
                   placeholder="Confirmez votre mot de passe"
+                  aria-invalid={!!errors.confirmPassword}
+                  aria-describedby={errors.confirmPassword ? 'confirmPassword-error' : undefined}
                 />
                 {errors.confirmPassword && (
-                  <p className="text-sm text-destructive flex items-center gap-1.5">
+                  <p id="confirmPassword-error" role="alert" className="text-sm text-destructive flex items-center gap-1.5">
                     <AlertCircle className="h-4 w-4 flex-shrink-0" />
                     {errors.confirmPassword.message}
                   </p>
@@ -147,10 +151,10 @@ export function ResetPassword() {
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                     </svg>
-                    Reinitialisation...
+                    Réinitialisation...
                   </span>
                 ) : (
-                  'Reinitialiser le mot de passe'
+                  'Réinitialiser le mot de passe'
                 )}
               </Button>
             </form>
@@ -158,7 +162,7 @@ export function ResetPassword() {
 
           <p className="mt-6 text-center text-muted-foreground text-sm">
             <Link to="/login" className="text-foreground font-medium hover:underline">
-              Retour a la connexion
+              Retour à la connexion
             </Link>
           </p>
         </motion.div>

@@ -222,7 +222,7 @@ public class AuthServiceImpl implements IAuthService {
         token.setExpiresAt(LocalDateTime.now().plusHours(VERIFICATION_TOKEN_EXPIRY_HOURS));
         verificationTokenRepository.save(token);
 
-        String verifyUrl = frontendUrl + "/verify-email?token=" + token.getToken();
+        String verifyUrl = escapeHtml(frontendUrl + "/verify-email?token=" + token.getToken());
         String html = """
             <!DOCTYPE html>
             <html><head><meta charset="UTF-8"></head><body>
@@ -249,7 +249,7 @@ public class AuthServiceImpl implements IAuthService {
         token.setExpiresAt(LocalDateTime.now().plusMinutes(PASSWORD_RESET_TOKEN_EXPIRY_MINUTES));
         verificationTokenRepository.save(token);
 
-        String resetUrl = frontendUrl + "/reset-password?token=" + token.getToken();
+        String resetUrl = escapeHtml(frontendUrl + "/reset-password?token=" + token.getToken());
         String html = """
             <!DOCTYPE html>
             <html><head><meta charset="UTF-8"></head><body>
@@ -341,7 +341,7 @@ public class AuthServiceImpl implements IAuthService {
 
     private void enforceMinimumLatency(long startNanos, long minimumMs) {
         long elapsedMs = (System.nanoTime() - startNanos) / 1_000_000;
-        long jitter = SECURE_RANDOM.nextInt(50);
+        long jitter = SECURE_RANDOM.nextInt(200);
         long targetMs = minimumMs + jitter;
         if (elapsedMs < targetMs) {
             try {
@@ -350,6 +350,14 @@ public class AuthServiceImpl implements IAuthService {
                 Thread.currentThread().interrupt();
             }
         }
+    }
+
+    private static String escapeHtml(String input) {
+        return input.replace("&", "&amp;")
+                    .replace("<", "&lt;")
+                    .replace(">", "&gt;")
+                    .replace("\"", "&quot;")
+                    .replace("'", "&#x27;");
     }
 
     private User findOrCreateGoogleUser(String googleId, String email, String pictureUrl) {

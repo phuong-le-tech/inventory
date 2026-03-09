@@ -1,6 +1,3 @@
-@import url('https://api.fontshare.com/v2/css?f[]=clash-display@400,500,600,700&display=swap');
-@import url('https://api.fontshare.com/v2/css?f[]=cabinet-grotesk@400,500,700&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -54,6 +51,14 @@
     --status-archived-text: 220 9% 46%;
     --status-archived-border: 220 13% 83%;
 
+    /* Badge semantic tokens */
+    --badge-success: 142 76% 93%;
+    --badge-success-text: 143 64% 24%;
+    --badge-warning: 48 96% 89%;
+    --badge-warning-text: 28 73% 26%;
+    --badge-error: 0 84% 93%;
+    --badge-error-text: 0 70% 35%;
+
     /* Brand emerald */
     --brand: 161 94% 30%;
     --brand-light: 152 81% 96%;
@@ -105,6 +110,14 @@
     --status-archived: 240 4% 14%;
     --status-archived-text: 240 4% 58%;
     --status-archived-border: 240 4% 22%;
+
+    /* Badge semantic tokens - dark */
+    --badge-success: 142 50% 15%;
+    --badge-success-text: 142 70% 65%;
+    --badge-warning: 48 60% 15%;
+    --badge-warning-text: 48 80% 70%;
+    --badge-error: 0 50% 15%;
+    --badge-error-text: 0 70% 65%;
 
     /* Brand emerald - vivid on dark */
     --brand: 158 64% 52%;

@@ -1,11 +1,13 @@
-import { useState, useEffect, useCallback } from 'react';
-import { useForm } from 'react-hook-form';
+import { useState, useEffect } from 'react';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Plus, Trash2, Shield, User as UserIcon, AlertCircle } from 'lucide-react';
 import { motion } from 'motion/react';
 import { createUserSchema, CreateUserFormData } from '../../schemas/auth.schemas';
 import { User } from '../../types/auth';
 import { adminApi } from '../../services/authApi';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { queryKeys } from '../../lib/queryKeys';
 import { useToast } from '../../components/Toast';
 import ConfirmModal from '../../components/ConfirmModal';
 import { getApiErrorStatus } from '../../utils/errorUtils';
@@ -19,6 +21,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { BlurFade } from '@/components/effects/blur-fade';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const PASTEL_COLORS = [
   'bg-brand',
@@ -37,32 +40,21 @@ function getAvatarColor(email: string): string {
 }
 
 export function UsersPage() {
-  const [users, setUsers] = useState<User[]>([]);
-  const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [page, setPage] = useState(0);
-  const [totalPages, setTotalPages] = useState(0);
-  const [totalElements, setTotalElements] = useState(0);
   const { showToast } = useToast();
+  const queryClient = useQueryClient();
 
-  const loadUsers = useCallback(async () => {
-    setLoading(true);
-    try {
-      const response = await adminApi.getUsers({ page, size: 20 });
-      setUsers(response.content);
-      setTotalPages(response.totalPages);
-      setTotalElements(response.totalElements);
-    } catch {
-      showToast('Echec du chargement des utilisateurs', 'error');
-    } finally {
-      setLoading(false);
-    }
-  }, [page, showToast]);
+  const params = { page, size: 20 };
+  const { data, isLoading: loading } = useQuery({
+    queryKey: queryKeys.admin.users(params),
+    queryFn: () => adminApi.getUsers(params),
+  });
 
-  useEffect(() => {
-    loadUsers();
-  }, [loadUsers]);
+  const users = data?.content ?? [];
+  const totalPages = data?.totalPages ?? 0;
+  const totalElements = data?.totalElements ?? 0;
 
   const handleDeleteConfirm = async () => {
     if (!pendingDeleteId) return;
@@ -70,41 +62,65 @@ export function UsersPage() {
     setPendingDeleteId(null);
     try {
       await adminApi.deleteUser(id);
-      setUsers(users.filter(u => u.id !== id));
-      showToast('Utilisateur supprime', 'success');
+      showToast('Utilisateur supprimé', 'success');
       if (users.length === 1 && page > 0) {
         setPage(p => p - 1);
-      } else {
-        loadUsers();
       }
+      queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
     } catch {
-      showToast("Echec de la suppression de l'utilisateur", 'error');
+      showToast("Échec de la suppression de l'utilisateur", 'error');
     }
   };
 
   const handleToggleRole = async (user: User) => {
     const newRole = user.role === 'ADMIN' ? 'USER' : 'ADMIN';
     try {
-      const updated = await adminApi.updateUserRole(user.id, newRole);
-      setUsers(users.map(u => u.id === user.id ? updated : u));
+      await adminApi.updateUserRole(user.id, newRole);
       const label = newRole === 'ADMIN' ? 'Administrateur' : 'Utilisateur';
-      showToast(`Role modifie en ${label}`, 'success');
+      showToast(`Rôle modifié en ${label}`, 'success');
+      queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
     } catch {
-      showToast('Echec de la mise a jour du role', 'error');
+      showToast('Échec de la mise à jour du rôle', 'error');
     }
   };
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-foreground"></div>
+      <div className="animate-fade-in">
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <div className="h-10 w-48 bg-muted rounded-lg animate-pulse mb-2" />
+            <div className="h-5 w-72 bg-muted rounded-lg animate-pulse" />
+          </div>
+          <div className="h-10 w-44 bg-muted rounded-lg animate-pulse" />
+        </div>
+        <div className="rounded-xl border bg-card">
+          <div className="border-b px-6 py-3 flex gap-4">
+            <div className="h-4 w-32 bg-muted rounded animate-pulse" />
+            <div className="h-4 w-16 bg-muted rounded animate-pulse" />
+            <div className="h-4 w-20 bg-muted rounded animate-pulse" />
+            <div className="h-4 w-16 bg-muted rounded animate-pulse ml-auto" />
+          </div>
+          {[...Array(5)].map((_, i) => (
+            <div key={i} className="flex items-center gap-4 px-6 py-5 border-b last:border-0">
+              <div className="h-10 w-10 rounded-full bg-muted animate-pulse" />
+              <div className="h-4 w-48 bg-muted rounded animate-pulse" />
+              <div className="h-6 w-28 bg-muted rounded-full animate-pulse ml-8" />
+              <div className="h-4 w-24 bg-muted rounded animate-pulse ml-auto" />
+              <div className="flex gap-1 ml-4">
+                <div className="h-8 w-8 bg-muted rounded animate-pulse" />
+                <div className="h-8 w-8 bg-muted rounded animate-pulse" />
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
 
   return (
     <TooltipProvider>
-      <div className="animate-fade-in">
+      <div className="max-w-7xl mx-auto animate-fade-in">
         <div className="flex items-center justify-between mb-8">
           <div>
             <BlurFade>
@@ -112,7 +128,7 @@ export function UsersPage() {
             </BlurFade>
             <BlurFade delay={0.1}>
               <p className="text-muted-foreground">
-                Gerer les comptes utilisateurs et les permissions
+                Gérer les comptes utilisateurs et les permissions
                 {totalElements > 0 && ` -- ${totalElements} au total`}
               </p>
             </BlurFade>
@@ -128,8 +144,8 @@ export function UsersPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Utilisateur</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead>Cree le</TableHead>
+                <TableHead>Rôle</TableHead>
+                <TableHead>Créé le</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -179,7 +195,7 @@ export function UsersPage() {
                           </Button>
                         </TooltipTrigger>
                         <TooltipContent>
-                          {user.role === 'ADMIN' ? 'Retrograder en utilisateur' : 'Promouvoir en administrateur'}
+                          {user.role === 'ADMIN' ? 'Rétrograder en utilisateur' : 'Promouvoir en administrateur'}
                         </TooltipContent>
                       </Tooltip>
                       <Tooltip>
@@ -204,7 +220,7 @@ export function UsersPage() {
 
           {users.length === 0 && (
             <div className="text-center py-12 text-muted-foreground">
-              Aucun utilisateur trouve
+              Aucun utilisateur trouvé
             </div>
           )}
         </div>
@@ -214,7 +230,7 @@ export function UsersPage() {
         <ConfirmModal
           isOpen={pendingDeleteId !== null}
           title="Supprimer l'utilisateur"
-          message="Etes-vous sur de vouloir supprimer cet utilisateur ? Cette action est irreversible."
+          message="Êtes-vous sûr de vouloir supprimer cet utilisateur ? Cette action est irréversible."
           confirmLabel="Supprimer"
           onConfirm={handleDeleteConfirm}
           onCancel={() => setPendingDeleteId(null)}
@@ -223,10 +239,10 @@ export function UsersPage() {
         <CreateUserModal
           open={showCreateModal}
           onClose={() => setShowCreateModal(false)}
-          onCreated={(user) => {
-            setUsers(prev => [...prev, user]);
+          onCreated={() => {
             setShowCreateModal(false);
-            showToast('Utilisateur cree avec succes', 'success');
+            showToast('Utilisateur créé avec succès', 'success');
+            queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
           }}
         />
       </div>
@@ -241,6 +257,7 @@ function CreateUserModal({ open, onClose, onCreated }: { open: boolean; onClose:
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors },
     reset,
   } = useForm<CreateUserFormData>({
@@ -265,8 +282,8 @@ function CreateUserModal({ open, onClose, onCreated }: { open: boolean; onClose:
       const status = getApiErrorStatus(err);
       setServerError(
         status === 409
-          ? 'Un utilisateur avec cet email existe deja'
-          : "Echec de la creation de l'utilisateur"
+          ? 'Un utilisateur avec cet email existe déjà'
+          : "Échec de la création de l'utilisateur"
       );
     } finally {
       setLoading(false);
@@ -277,7 +294,7 @@ function CreateUserModal({ open, onClose, onCreated }: { open: boolean; onClose:
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Creer un utilisateur</DialogTitle>
+          <DialogTitle>Créer un utilisateur</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -295,9 +312,11 @@ function CreateUserModal({ open, onClose, onCreated }: { open: boolean; onClose:
               {...register('email')}
               className={errors.email ? 'border-destructive' : ''}
               placeholder="utilisateur@exemple.com"
+              aria-invalid={!!errors.email}
+              aria-describedby={errors.email ? 'create-user-email-error' : undefined}
             />
             {errors.email && (
-              <p className="text-sm text-destructive flex items-center gap-1.5">
+              <p id="create-user-email-error" role="alert" className="text-sm text-destructive flex items-center gap-1.5">
                 <AlertCircle className="h-4 w-4 flex-shrink-0" />
                 {errors.email.message}
               </p>
@@ -311,10 +330,12 @@ function CreateUserModal({ open, onClose, onCreated }: { open: boolean; onClose:
               type="password"
               {...register('password')}
               className={errors.password ? 'border-destructive' : ''}
-              placeholder="Minimum 6 caracteres"
+              placeholder="Minimum 6 caractères"
+              aria-invalid={!!errors.password}
+              aria-describedby={errors.password ? 'create-user-password-error' : undefined}
             />
             {errors.password && (
-              <p className="text-sm text-destructive flex items-center gap-1.5">
+              <p id="create-user-password-error" role="alert" className="text-sm text-destructive flex items-center gap-1.5">
                 <AlertCircle className="h-4 w-4 flex-shrink-0" />
                 {errors.password.message}
               </p>
@@ -322,15 +343,22 @@ function CreateUserModal({ open, onClose, onCreated }: { open: boolean; onClose:
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="create-user-role">Role</Label>
-            <select
-              id="create-user-role"
-              {...register('role')}
-              className="flex h-10 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-            >
-              <option value="USER">Utilisateur</option>
-              <option value="ADMIN">Administrateur</option>
-            </select>
+            <Label htmlFor="create-user-role">Rôle</Label>
+            <Controller
+              name="role"
+              control={control}
+              render={({ field }) => (
+                <Select value={field.value} onValueChange={field.onChange}>
+                  <SelectTrigger id="create-user-role">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="USER">Utilisateur</SelectItem>
+                    <SelectItem value="ADMIN">Administrateur</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
+            />
           </div>
 
           <DialogFooter className="gap-2 sm:gap-0 pt-4">
@@ -338,7 +366,7 @@ function CreateUserModal({ open, onClose, onCreated }: { open: boolean; onClose:
               Annuler
             </Button>
             <Button type="submit" disabled={loading}>
-              {loading ? 'Creation...' : 'Creer'}
+              {loading ? 'Création...' : 'Créer'}
             </Button>
           </DialogFooter>
         </form>

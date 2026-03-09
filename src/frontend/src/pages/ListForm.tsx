@@ -1,21 +1,27 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useForm, useFieldArray } from 'react-hook-form';
+import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import type { Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ArrowLeft, AlertCircle, Plus, Trash2 } from 'lucide-react';
+import { AlertCircle, Plus, Trash2 } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { listsApi } from '../services/api';
+import { queryKeys } from '../lib/queryKeys';
 import { ItemListFormData, FIELD_TYPE_OPTIONS, FIELD_TYPE_LABELS, CustomFieldType } from '../types/item';
 import { listFormSchema } from '../schemas/item.schemas';
 import { Skeleton, SkeletonText } from '../components/Skeleton';
 import { useToast } from '../components/Toast';
+import { useUnsavedChangesGuard } from '../hooks/useUnsavedChangesGuard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { BlurFade } from '@/components/effects/blur-fade';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Breadcrumb } from '../components/Breadcrumb';
 
 const PASTEL_BORDERS = [
   'border-l-brand',
@@ -35,10 +41,10 @@ export default function ListForm() {
   const isEditing = Boolean(id);
   const { showToast } = useToast();
 
-  const [loading, setLoading] = useState(isEditing);
+  const queryClient = useQueryClient();
   const [submitting, setSubmitting] = useState(false);
 
-  const { register, handleSubmit, reset, control, formState: { errors } } = useForm<ItemListFormData>({
+  const { register, handleSubmit, reset, control, watch, formState: { errors, isDirty } } = useForm<ItemListFormData>({
     resolver: zodResolver(listFormSchema) as unknown as Resolver<ItemListFormData>,
     defaultValues: {
       name: '',
@@ -53,28 +59,36 @@ export default function ListForm() {
     name: 'customFieldDefinitions',
   });
 
-  useEffect(() => {
-    if (isEditing && id) {
-      loadList(id);
-    }
-  }, [id, isEditing]);
+  const confirmDiscardChanges = useUnsavedChangesGuard(isDirty && !submitting);
 
-  const loadList = async (listId: string) => {
-    try {
-      const list = await listsApi.getById(listId);
+  const { data: listData, isLoading: listLoading, error: listError } = useQuery({
+    queryKey: id ? queryKeys.lists.detail(id) : ['lists', 'detail', null],
+    queryFn: () => listsApi.getById(id!),
+    enabled: isEditing && !!id,
+  });
+
+  useEffect(() => {
+    if (listData) {
       reset({
-        name: list.name,
-        description: list.description || '',
-        category: list.category || '',
-        customFieldDefinitions: list.customFieldDefinitions || [],
+        name: listData.name,
+        description: listData.description || '',
+        category: listData.category || '',
+        customFieldDefinitions: listData.customFieldDefinitions || [],
       });
-    } catch {
-      showToast('Echec du chargement de la liste', 'error');
-      navigate('/lists');
-    } finally {
-      setLoading(false);
     }
-  };
+  }, [listData, reset]);
+
+  useEffect(() => {
+    if (listError) {
+      showToast('Échec du chargement de la liste', 'error');
+      navigate('/lists');
+    }
+  }, [listError, showToast, navigate]);
+
+  const loading = isEditing && listLoading;
+
+  const nameValue = watch('name') ?? '';
+  const descriptionValue = watch('description') ?? '';
 
   const onSubmit = async (data: ItemListFormData) => {
     setSubmitting(true);
@@ -89,15 +103,17 @@ export default function ListForm() {
 
       if (isEditing && id) {
         await listsApi.update(id, data);
-        showToast('Liste mise a jour avec succes', 'success');
+        showToast('Liste mise à jour avec succès', 'success');
         navigate(`/lists/${id}`);
       } else {
         const newList = await listsApi.create(data);
-        showToast('Liste creee avec succes', 'success');
+        showToast('Liste créée avec succès', 'success');
         navigate(`/lists/${newList.id}`);
       }
+      queryClient.invalidateQueries({ queryKey: queryKeys.lists.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
     } catch {
-      showToast("Echec de l'enregistrement. Veuillez reessayer.", 'error');
+      showToast("Échec de l'enregistrement. Veuillez réessayer.", 'error');
     } finally {
       setSubmitting(false);
     }
@@ -105,7 +121,7 @@ export default function ListForm() {
 
   if (loading) {
     return (
-      <div className="max-w-2xl mx-auto">
+      <div className="max-w-7xl mx-auto">
         <SkeletonText className="w-36 h-5 mb-8" />
         <SkeletonText className="w-48 h-10 mb-10" />
         <div className="space-y-8">
@@ -121,14 +137,21 @@ export default function ListForm() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto animate-fade-in">
-      <button
-        onClick={() => navigate(isEditing && id ? `/lists/${id}` : '/lists')}
-        className="inline-flex items-center text-muted-foreground hover:text-foreground mb-8 transition-all duration-200 hover:-translate-x-0.5 group text-sm"
-      >
-        <ArrowLeft className="h-4 w-4 mr-1.5 transition-transform group-hover:-translate-x-0.5" />
-        {isEditing ? 'Retour a la liste' : 'Retour aux listes'}
-      </button>
+    <div className="max-w-7xl mx-auto animate-fade-in">
+      <Breadcrumb
+        items={
+          isEditing && id
+            ? [
+                { label: 'Mes Listes', href: '/lists' },
+                { label: listData?.name || '...', href: `/lists/${id}` },
+                { label: 'Modifier' },
+              ]
+            : [
+                { label: 'Mes Listes', href: '/lists' },
+                { label: 'Nouvelle liste' },
+              ]
+        }
+      />
 
       <BlurFade>
         <h1 className="font-display text-4xl font-semibold tracking-tight mb-2">
@@ -146,13 +169,22 @@ export default function ListForm() {
             {...register('name')}
             className={errors.name ? 'border-destructive focus-visible:ring-destructive' : ''}
             placeholder="Entrez le nom de la liste"
+            aria-invalid={!!errors.name}
+            aria-describedby={errors.name ? 'list-name-error' : undefined}
           />
-          {errors.name && (
-            <p className="text-sm text-destructive flex items-center">
-              <AlertCircle className="h-4 w-4 mr-1.5" />
-              {errors.name.message}
+          <div className="flex justify-between items-center">
+            <div>
+              {errors.name && (
+                <p id="list-name-error" role="alert" className="text-sm text-destructive flex items-center">
+                  <AlertCircle className="h-4 w-4 mr-1.5" />
+                  {errors.name.message}
+                </p>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {(nameValue?.length ?? 0)}/100
             </p>
-          )}
+          </div>
         </div>
 
         <div className="space-y-2">
@@ -163,21 +195,24 @@ export default function ListForm() {
             rows={3}
             placeholder="Entrez une description (optionnel)"
           />
+          <p className="text-xs text-muted-foreground text-right">
+            {(descriptionValue?.length ?? 0)}/500
+          </p>
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="list-category">Categorie</Label>
+          <Label htmlFor="list-category">Catégorie</Label>
           <Input
             id="list-category"
             type="text"
             {...register('category')}
-            placeholder="Entrez la categorie (optionnel)"
+            placeholder="Entrez la catégorie (optionnel)"
           />
         </div>
 
         {/* Custom Field Definitions */}
         <div>
-          <Label className="mb-3 block">Champs personnalises</Label>
+          <Label className="mb-3 block">Champs personnalisés</Label>
 
           <AnimatePresence mode="popLayout">
             {fields.map((field, index) => (
@@ -196,34 +231,49 @@ export default function ListForm() {
                     <Input
                       type="text"
                       {...register(`customFieldDefinitions.${index}.label`)}
-                      aria-label={`Libelle du champ ${index + 1}`}
-                      placeholder="Libelle du champ"
+                      aria-label={`Libellé du champ ${index + 1}`}
+                      placeholder="Libellé du champ"
                       className="h-9"
                     />
                   </div>
 
                   <div className="w-32">
-                    <select
-                      {...register(`customFieldDefinitions.${index}.type`)}
-                      aria-label={`Type du champ ${index + 1}`}
-                      className="flex h-9 w-full rounded-lg border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                    >
-                      {FIELD_TYPE_OPTIONS.map((t) => (
-                        <option key={t} value={t}>
-                          {FIELD_TYPE_LABELS[t as CustomFieldType]}
-                        </option>
-                      ))}
-                    </select>
+                    <Controller
+                      name={`customFieldDefinitions.${index}.type`}
+                      control={control}
+                      defaultValue="TEXT"
+                      render={({ field }) => (
+                        <Select value={field.value} onValueChange={field.onChange}>
+                          <SelectTrigger className="h-9" aria-label={`Type du champ ${index + 1}`}>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {FIELD_TYPE_OPTIONS.map((t) => (
+                              <SelectItem key={t} value={t}>
+                                {FIELD_TYPE_LABELS[t as CustomFieldType]}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                    />
                   </div>
 
-                  <label className="flex items-center gap-1.5 pt-2 shrink-0">
-                    <input
-                      type="checkbox"
-                      {...register(`customFieldDefinitions.${index}.required`)}
-                      className="rounded border-input"
-                    />
-                    <span className="text-xs text-muted-foreground">Requis</span>
-                  </label>
+                  <Controller
+                    name={`customFieldDefinitions.${index}.required`}
+                    control={control}
+                    defaultValue={false}
+                    render={({ field }) => (
+                      <label className="flex items-center gap-1.5 pt-2 shrink-0 cursor-pointer">
+                        <Checkbox
+                          checked={Boolean(field.value)}
+                          onCheckedChange={field.onChange}
+                          aria-label={`Champ ${index + 1} requis`}
+                        />
+                        <span className="text-xs text-muted-foreground">Requis</span>
+                      </label>
+                    )}
+                  />
 
                   <Button
                     type="button"
@@ -266,7 +316,10 @@ export default function ListForm() {
             type="button"
             variant="ghost"
             className="flex-1"
-            onClick={() => navigate(isEditing && id ? `/lists/${id}` : '/lists')}
+            onClick={() => {
+              if (!confirmDiscardChanges()) return;
+              navigate(isEditing && id ? `/lists/${id}` : '/lists');
+            }}
           >
             Annuler
           </Button>
@@ -275,10 +328,11 @@ export default function ListForm() {
             disabled={submitting}
             className="flex-1"
           >
-            {submitting ? 'Enregistrement...' : isEditing ? 'Mettre a jour' : 'Creer'}
+            {submitting ? 'Enregistrement...' : isEditing ? 'Mettre à jour' : 'Créer'}
           </Button>
         </div>
       </form>
+
     </div>
   );
 }

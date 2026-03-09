@@ -3,9 +3,10 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useForm, Controller } from "react-hook-form";
 import type { Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowLeft, Upload, AlertCircle } from "lucide-react";
-import axios from "axios";
+import { Upload, AlertCircle, X } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { itemsApi, listsApi } from "../services/api";
+import { queryKeys } from "../lib/queryKeys";
 import {
   ItemFormData,
   STATUS_OPTIONS,
@@ -18,12 +19,16 @@ import { createItemSchema } from "../schemas/item.schemas";
 import { Skeleton, SkeletonText } from "../components/Skeleton";
 import { useToast } from "../components/Toast";
 import ListCombobox from "../components/ListCombobox";
+import { useUnsavedChangesGuard } from "../hooks/useUnsavedChangesGuard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { BlurFade } from "@/components/effects/blur-fade";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
+import { Breadcrumb } from "../components/Breadcrumb";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const ALLOWED_FILE_TYPES = [
@@ -39,13 +44,15 @@ export default function ItemForm() {
   const isEditing = Boolean(itemId);
   const { showToast } = useToast();
 
-  const [loading, setLoading] = useState(isEditing);
+  const queryClient = useQueryClient();
   const [submitting, setSubmitting] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
   const [selectedListDefs, setSelectedListDefs] = useState<
     CustomFieldDefinition[]
   >([]);
+  const [selectedListName, setSelectedListName] = useState("");
 
   const schemaRef = useRef(createItemSchema([]));
   const resolver = useCallback<Resolver<ItemFormData>>(
@@ -61,7 +68,7 @@ export default function ItemForm() {
     watch,
     control,
     setValue,
-    formState: { errors },
+    formState: { errors, isDirty },
   } = useForm<ItemFormData>({
     resolver,
     defaultValues: {
@@ -73,7 +80,10 @@ export default function ItemForm() {
     },
   });
 
+  const confirmDiscardChanges = useUnsavedChangesGuard(isDirty && !submitting);
+
   const selectedListId = watch("itemListId");
+  const nameValue = watch("name") ?? "";
 
   const fieldDefs = useMemo<CustomFieldDefinition[]>(() => {
     return [...selectedListDefs].sort(
@@ -85,51 +95,50 @@ export default function ItemForm() {
     schemaRef.current = createItemSchema(fieldDefs);
   }, [fieldDefs]);
 
+  const { data: itemData, isLoading: itemLoading, error: itemError } = useQuery({
+    queryKey: itemId ? queryKeys.items.detail(itemId) : ['items', 'detail', null],
+    queryFn: () => itemsApi.getById(itemId!),
+    enabled: isEditing && !!itemId,
+  });
+
   useEffect(() => {
-    if (!isEditing || !itemId) {
-      setLoading(false);
-      return;
-    }
-    const controller = new AbortController();
-    const load = async () => {
-      try {
-        const item = await itemsApi.getById(itemId, controller.signal);
-        if (!controller.signal.aborted) {
-          reset({
-            name: item.name,
-            itemListId: item.itemListId,
-            status: item.status,
-            stock: item.stock,
-            customFieldValues: item.customFieldValues || {},
-          });
-          if (item.hasImage) {
-            setImagePreview(getItemImageUrl(item.id));
-          }
-        }
-      } catch (err) {
-        if (!axios.isCancel(err) && !controller.signal.aborted) {
-          showToast("Echec du chargement de l'article", "error");
-          navigate(listId ? `/lists/${listId}` : "/lists");
-        }
-      } finally {
-        if (!controller.signal.aborted) setLoading(false);
+    if (itemData) {
+      reset({
+        name: itemData.name,
+        itemListId: itemData.itemListId,
+        status: itemData.status,
+        stock: itemData.stock,
+        customFieldValues: itemData.customFieldValues || {},
+      });
+      if (itemData.hasImage) {
+        setImagePreview(getItemImageUrl(itemData.id));
       }
-    };
-    load();
-    return () => controller.abort();
-  }, [itemId, isEditing, reset, navigate, listId, showToast]);
+    }
+  }, [itemData, reset]);
+
+  useEffect(() => {
+    if (itemError) {
+      showToast("Échec du chargement de l'article", "error");
+      navigate(listId ? `/lists/${listId}` : "/lists");
+    }
+  }, [itemError, showToast, navigate, listId]);
+
+  const loading = isEditing && itemLoading;
 
   useEffect(() => {
     if (!selectedListId) {
       setSelectedListDefs([]);
+      setSelectedListName("");
       return;
     }
     const controller = new AbortController();
     listsApi
       .getById(selectedListId, controller.signal)
       .then((list) => {
-        if (!controller.signal.aborted)
+        if (!controller.signal.aborted) {
           setSelectedListDefs(list.customFieldDefinitions || []);
+          setSelectedListName(list.name);
+        }
       })
       .catch(() => {
         if (!controller.signal.aborted) setSelectedListDefs([]);
@@ -141,26 +150,65 @@ export default function ItemForm() {
     if (!isEditing) setValue("customFieldValues", {});
   }, [selectedListId, isEditing, setValue]);
 
+  const processImageFile = (file: File) => {
+    if (file.size > MAX_FILE_SIZE) {
+      showToast("La taille du fichier doit être inférieure à 10 Mo", "error");
+      return;
+    }
+    if (!ALLOWED_FILE_TYPES.includes(file.type)) {
+      showToast(
+        "Seules les images JPEG, PNG, GIF et WebP sont autorisées",
+        "error",
+      );
+      return;
+    }
+    setImageFile(file);
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      if (typeof reader.result === "string") setImagePreview(reader.result);
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > MAX_FILE_SIZE) {
-        showToast("La taille du fichier doit être inférieure à 10 Mo", "error");
-        return;
-      }
-      if (!ALLOWED_FILE_TYPES.includes(file.type)) {
-        showToast(
-          "Seules les images JPEG, PNG, GIF et WebP sont autorisées",
-          "error",
-        );
-        return;
-      }
-      setImageFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        if (typeof reader.result === "string") setImagePreview(reader.result);
-      };
-      reader.readAsDataURL(file);
+      processImageFile(file);
+    }
+  };
+
+  const handleRemoveImage = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setImageFile(null);
+    setImagePreview(null);
+  };
+
+  const handleDragEnter = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    const file = e.dataTransfer.files?.[0];
+    if (file) {
+      processImageFile(file);
     }
   };
 
@@ -180,6 +228,9 @@ export default function ItemForm() {
         showToast("Article créé avec succès", "success");
       }
       navigate(`/lists/${data.itemListId}`);
+      queryClient.invalidateQueries({ queryKey: queryKeys.items.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.lists.detail(data.itemListId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
     } catch {
       showToast("Échec de l'enregistrement. Veuillez réessayer.", "error");
     } finally {
@@ -189,7 +240,7 @@ export default function ItemForm() {
 
   if (loading) {
     return (
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-7xl mx-auto">
         <SkeletonText className="w-36 h-5 mb-8" />
         <SkeletonText className="w-48 h-10 mb-10" />
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
@@ -210,14 +261,16 @@ export default function ItemForm() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto animate-fade-in">
-      <button
-        onClick={() => navigate(listId ? `/lists/${listId}` : "/lists")}
-        className="inline-flex items-center text-muted-foreground hover:text-foreground mb-8 transition-all duration-200 hover:-translate-x-0.5 group text-sm"
-      >
-        <ArrowLeft className="h-4 w-4 mr-1.5 transition-transform group-hover:-translate-x-0.5" />
-        Retour à la liste
-      </button>
+    <div className="max-w-7xl mx-auto animate-fade-in">
+      <Breadcrumb
+        items={[
+          { label: 'Mes Listes', href: '/lists' },
+          ...(listId
+            ? [{ label: selectedListName || '...', href: `/lists/${listId}` }]
+            : []),
+          { label: isEditing ? 'Modifier' : 'Nouvel article' },
+        ]}
+      />
 
       <BlurFade>
         <h1 className="font-display text-4xl font-semibold tracking-tight mb-2">
@@ -242,13 +295,22 @@ export default function ItemForm() {
                     : ""
                 }
                 placeholder="Entrez le nom de l'article"
+                aria-invalid={!!errors.name}
+                aria-describedby={errors.name ? 'item-name-error' : undefined}
               />
-              {errors.name && (
-                <p className="text-sm text-destructive flex items-center">
-                  <AlertCircle className="h-4 w-4 mr-1.5" />
-                  {errors.name.message}
+              <div className="flex justify-between items-center">
+                <div>
+                  {errors.name && (
+                    <p id="item-name-error" role="alert" className="text-sm text-destructive flex items-center">
+                      <AlertCircle className="h-4 w-4 mr-1.5" />
+                      {errors.name.message}
+                    </p>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {(nameValue?.length ?? 0)}/200
                 </p>
-              )}
+              </div>
             </div>
 
             <div className="space-y-2">
@@ -262,11 +324,13 @@ export default function ItemForm() {
                     value={field.value}
                     onChange={field.onChange}
                     error={Boolean(errors.itemListId)}
+                    aria-invalid={!!errors.itemListId}
+                    aria-describedby={errors.itemListId ? 'item-list-error' : undefined}
                   />
                 )}
               />
               {errors.itemListId && (
-                <p className="text-sm text-destructive flex items-center">
+                <p id="item-list-error" role="alert" className="text-sm text-destructive flex items-center">
                   <AlertCircle className="h-4 w-4 mr-1.5" />
                   {errors.itemListId.message}
                 </p>
@@ -287,9 +351,11 @@ export default function ItemForm() {
                       : ""
                   }
                   placeholder="0"
+                  aria-invalid={!!errors.stock}
+                  aria-describedby={errors.stock ? 'item-stock-error' : undefined}
                 />
                 {errors.stock && (
-                  <p className="text-sm text-destructive flex items-center">
+                  <p id="item-stock-error" role="alert" className="text-sm text-destructive flex items-center">
                     <AlertCircle className="h-4 w-4 mr-1.5" />
                     {errors.stock.message}
                   </p>
@@ -298,17 +364,25 @@ export default function ItemForm() {
 
               <div className="space-y-2">
                 <Label htmlFor="item-status">Statut</Label>
-                <select
-                  id="item-status"
-                  {...register("status")}
-                  className="flex h-10 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                >
-                  {STATUS_OPTIONS.map((status) => (
-                    <option key={status} value={status}>
-                      {STATUS_LABELS[status]}
-                    </option>
-                  ))}
-                </select>
+                <Controller
+                  name="status"
+                  control={control}
+                  defaultValue="IN_STOCK"
+                  render={({ field }) => (
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <SelectTrigger id="item-status">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {STATUS_OPTIONS.map((status) => (
+                          <SelectItem key={status} value={status}>
+                            {STATUS_LABELS[status]}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
               </div>
             </div>
 
@@ -352,6 +426,8 @@ export default function ItemForm() {
                               : ""
                           }
                           placeholder={`Entrez ${def.label.toLowerCase()}`}
+                          aria-invalid={!!fieldError}
+                          aria-describedby={fieldError ? `${fieldId}-error` : undefined}
                         />
                       )}
 
@@ -370,6 +446,8 @@ export default function ItemForm() {
                               : ""
                           }
                           placeholder="0"
+                          aria-invalid={!!fieldError}
+                          aria-describedby={fieldError ? `${fieldId}-error` : undefined}
                         />
                       )}
 
@@ -384,6 +462,8 @@ export default function ItemForm() {
                               ? "border-destructive focus-visible:ring-destructive"
                               : ""
                           }
+                          aria-invalid={!!fieldError}
+                          aria-describedby={fieldError ? `${fieldId}-error` : undefined}
                         />
                       )}
 
@@ -398,14 +478,10 @@ export default function ItemForm() {
                               htmlFor={fieldId}
                               className="flex items-center gap-3 h-10 px-3 border rounded-lg cursor-pointer hover:bg-secondary/50 transition-colors"
                             >
-                              <input
+                              <Checkbox
                                 id={fieldId}
-                                type="checkbox"
                                 checked={Boolean(field.value)}
-                                onChange={(e) =>
-                                  field.onChange(e.target.checked)
-                                }
-                                className="rounded border-input"
+                                onCheckedChange={field.onChange}
                               />
                               <span className="text-sm">{def.label}</span>
                             </label>
@@ -414,26 +490,35 @@ export default function ItemForm() {
                       )}
 
                       {def.type === "SELECT" && (
-                        <select
-                          id={fieldId}
+                        <Controller
                           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                          {...register(fieldPath as any)}
-                          className={cn(
-                            "flex h-10 w-full rounded-lg border bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-                            fieldError ? "border-destructive" : "border-input",
+                          name={fieldPath as any}
+                          control={control}
+                          defaultValue=""
+                          render={({ field }) => (
+                            <Select value={field.value || undefined} onValueChange={field.onChange}>
+                              <SelectTrigger
+                                id={fieldId}
+                                className={fieldError ? "border-destructive" : ""}
+                                aria-invalid={!!fieldError}
+                                aria-describedby={fieldError ? `${fieldId}-error` : undefined}
+                              >
+                                <SelectValue placeholder="-- Choisir --" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {def.options?.map((opt) => (
+                                  <SelectItem key={opt} value={opt}>
+                                    {opt}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                           )}
-                        >
-                          <option value="">-- Choisir --</option>
-                          {def.options?.map((opt) => (
-                            <option key={opt} value={opt}>
-                              {opt}
-                            </option>
-                          ))}
-                        </select>
+                        />
                       )}
 
                       {fieldError && (
-                        <p className="text-sm text-destructive flex items-center">
+                        <p id={`${fieldId}-error`} role="alert" className="text-sm text-destructive flex items-center">
                           <AlertCircle className="h-4 w-4 mr-1.5" />
                           {fieldError.message}
                         </p>
@@ -449,20 +534,25 @@ export default function ItemForm() {
           <div className="lg:col-span-2">
             <Label className="mb-2 block">Image</Label>
             <div className="sticky top-8">
-              <label className="block cursor-pointer">
+              <label className="block cursor-pointer relative">
                 <div
                   className={cn(
-                    "flex flex-col items-center justify-center rounded-2xl border-2 border-dashed transition-all duration-200 hover:border-brand-dark hover:bg-brand-light/30 group min-h-[280px] overflow-hidden",
+                    "flex flex-col items-center justify-center rounded-2xl border-2 border-dashed transition-all duration-200 group min-h-[280px] overflow-hidden",
                     imagePreview
                       ? "border-transparent p-0"
-                      : "border-border p-8",
+                      : "border-border p-8 hover:border-brand-dark hover:bg-brand-light/30",
+                    isDragging && "border-brand-dark bg-brand-light/40 scale-[1.02]"
                   )}
+                  onDragEnter={handleDragEnter}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
                 >
                   {imagePreview ? (
                     <div className="relative w-full h-full min-h-[280px]">
                       <img
                         src={imagePreview}
-                        alt="Apercu"
+                        alt="Aperçu"
                         className="w-full h-full object-cover rounded-2xl"
                       />
                       <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl flex items-center justify-center">
@@ -473,9 +563,15 @@ export default function ItemForm() {
                     </div>
                   ) : (
                     <>
-                      <Upload className="h-10 w-10 text-muted-foreground/50 mb-3 group-hover:text-brand-dark group-hover:scale-110 transition-all duration-200" />
-                      <span className="text-sm font-medium text-muted-foreground group-hover:text-foreground transition-colors">
-                        Télécharger une image
+                      <Upload className={cn(
+                        "h-10 w-10 text-muted-foreground/50 mb-3 group-hover:text-brand-dark transition-all duration-200",
+                        isDragging ? "text-brand-dark scale-110" : "group-hover:scale-110"
+                      )} />
+                      <span className={cn(
+                        "text-sm font-medium text-muted-foreground group-hover:text-foreground transition-colors",
+                        isDragging && "text-foreground"
+                      )}>
+                        {isDragging ? "Déposez l'image ici" : "Télécharger une image"}
                       </span>
                       <p className="text-xs text-muted-foreground mt-1">
                         PNG, JPG, GIF jusqu'à 10 Mo
@@ -489,6 +585,18 @@ export default function ItemForm() {
                   onChange={handleImageChange}
                   className="sr-only"
                 />
+                {imagePreview && (
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="icon"
+                    className="absolute -top-2 -right-2 h-8 w-8 rounded-full shadow-lg z-10"
+                    onClick={handleRemoveImage}
+                    title="Supprimer l'image"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                )}
               </label>
             </div>
           </div>
@@ -501,7 +609,10 @@ export default function ItemForm() {
             type="button"
             variant="ghost"
             className="flex-1"
-            onClick={() => navigate(listId ? `/lists/${listId}` : "/lists")}
+            onClick={() => {
+              if (!confirmDiscardChanges()) return;
+              navigate(listId ? `/lists/${listId}` : "/lists");
+            }}
           >
             Annuler
           </Button>
@@ -514,6 +625,7 @@ export default function ItemForm() {
           </Button>
         </div>
       </form>
+
     </div>
   );
 }

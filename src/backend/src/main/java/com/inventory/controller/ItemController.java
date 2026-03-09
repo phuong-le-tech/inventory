@@ -106,7 +106,12 @@ public class ItemController {
         if (!uploadRateLimiter.tryAcquire("upload:user:" + userDetails.getId()).allowed()) {
             throw new RateLimitExceededException("Too many upload requests. Please try again later.");
         }
-        ItemRequest request = objectMapper.readValue(data, ItemRequest.class);
+        ItemRequest request;
+        try {
+            request = objectMapper.readValue(data, ItemRequest.class);
+        } catch (IOException e) {
+            throw new IllegalArgumentException("Invalid request data format: " + e.getMessage(), e);
+        }
         Objects.requireNonNull(request, "Item request data must not be null");
         Set<ConstraintViolation<ItemRequest>> violations = validator.validate(request);
         if (!violations.isEmpty()) {
@@ -125,7 +130,12 @@ public class ItemController {
         if (!uploadRateLimiter.tryAcquire("upload:user:" + userDetails.getId()).allowed()) {
             throw new RateLimitExceededException("Too many upload requests. Please try again later.");
         }
-        ItemRequest request = objectMapper.readValue(data, ItemRequest.class);
+        ItemRequest request;
+        try {
+            request = objectMapper.readValue(data, ItemRequest.class);
+        } catch (IOException e) {
+            throw new IllegalArgumentException("Invalid request data format: " + e.getMessage(), e);
+        }
         Objects.requireNonNull(request, "Item request data must not be null");
         Set<ConstraintViolation<ItemRequest>> violations = validator.validate(request);
         if (!violations.isEmpty()) {

@@ -27,7 +27,7 @@ export function VerifyEmail() {
         .then(() => setStatus('success'))
         .catch((err) => {
           setStatus('error');
-          setError(getApiErrorMessage(err, 'Le lien de verification est invalide ou a expire.'));
+          setError(getApiErrorMessage(err, 'Le lien de vérification est invalide ou a expiré.'));
         });
     }
   }, [token]);
@@ -71,17 +71,17 @@ export function VerifyEmail() {
           {status === 'verifying' && (
             <div className="text-center">
               <Loader2 className="h-12 w-12 animate-spin text-muted-foreground mx-auto mb-4" />
-              <h2 className="font-display text-2xl font-semibold mb-2">Verification en cours...</h2>
-              <p className="text-muted-foreground">Veuillez patienter pendant que nous verifions votre email.</p>
+              <h2 className="font-display text-2xl font-semibold mb-2">Vérification en cours...</h2>
+              <p className="text-muted-foreground">Veuillez patienter pendant que nous vérifions votre email.</p>
             </div>
           )}
 
           {status === 'success' && (
             <div className="text-center">
               <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-4" />
-              <h2 className="font-display text-2xl font-semibold mb-2">Email verifie !</h2>
+              <h2 className="font-display text-2xl font-semibold mb-2">Email vérifié !</h2>
               <p className="text-muted-foreground mb-6">
-                Votre adresse email a ete verifiee avec succes. Vous pouvez maintenant vous connecter.
+                Votre adresse email a été vérifiée avec succès. Vous pouvez maintenant vous connecter.
               </p>
               <Button asChild className="w-full h-11" size="lg">
                 <Link to="/login?verified=true">Se connecter</Link>
@@ -92,15 +92,15 @@ export function VerifyEmail() {
           {status === 'error' && (
             <div className="text-center">
               <XCircle className="h-12 w-12 text-destructive mx-auto mb-4" />
-              <h2 className="font-display text-2xl font-semibold mb-2">Echec de la verification</h2>
+              <h2 className="font-display text-2xl font-semibold mb-2">Échec de la vérification</h2>
               <p className="text-muted-foreground mb-6">{error}</p>
               <div className="rounded-2xl border bg-card p-6 shadow-float text-left">
                 <p className="text-sm text-muted-foreground mb-4">
-                  Entrez votre email pour recevoir un nouveau lien de verification :
+                  Entrez votre email pour recevoir un nouveau lien de vérification :
                 </p>
                 {resendSent ? (
                   <p className="text-sm text-green-600">
-                    Si un compte existe avec cet email, un nouveau lien de verification a ete envoye.
+                    Si un compte existe avec cet email, un nouveau lien de vérification a été envoyé.
                   </p>
                 ) : (
                   <div className="flex gap-2">
@@ -118,7 +118,7 @@ export function VerifyEmail() {
               </div>
               <p className="mt-4 text-sm text-muted-foreground">
                 <Link to="/login" className="text-foreground font-medium hover:underline">
-                  Retour a la connexion
+                  Retour à la connexion
                 </Link>
               </p>
             </div>
@@ -127,17 +127,17 @@ export function VerifyEmail() {
           {status === 'pending' && (
             <div className="text-center">
               <Mail className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h2 className="font-display text-2xl font-semibold mb-2">Verifiez votre email</h2>
+              <h2 className="font-display text-2xl font-semibold mb-2">Vérifiez votre email</h2>
               <p className="text-muted-foreground mb-6">
-                Un email de verification a ete envoye a votre adresse. Cliquez sur le lien dans l'email pour activer votre compte.
+                Un email de vérification a été envoyé à votre adresse. Cliquez sur le lien dans l'email pour activer votre compte.
               </p>
               <div className="rounded-2xl border bg-card p-6 shadow-float">
                 <p className="text-sm text-muted-foreground mb-4">
-                  Vous n'avez pas recu l'email ? Entrez votre adresse pour le renvoyer :
+                  Vous n'avez pas reçu l'email ? Entrez votre adresse pour le renvoyer :
                 </p>
                 {resendSent ? (
                   <p className="text-sm text-green-600">
-                    Si un compte existe avec cet email, un nouveau lien de verification a ete envoye.
+                    Si un compte existe avec cet email, un nouveau lien de vérification a été envoyé.
                   </p>
                 ) : (
                   <div className="flex gap-2">
@@ -155,7 +155,7 @@ export function VerifyEmail() {
               </div>
               <p className="mt-4 text-sm text-muted-foreground">
                 <Link to="/login" className="text-foreground font-medium hover:underline">
-                  Retour a la connexion
+                  Retour à la connexion
                 </Link>
               </p>
             </div>

@@ -12,10 +12,13 @@ import com.inventory.exception.RateLimitExceededException;
 import com.inventory.exception.UnauthorizedException;
 import com.inventory.exception.UserAlreadyExistsException;
 import com.inventory.exception.UserNotFoundException;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.env.Environment;
 import org.springframework.core.env.Profiles;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.lang.NonNull;
@@ -23,6 +26,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+@Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -91,6 +95,9 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ApiErrorResponse> handleAccessDenied(AccessDeniedException e) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String principal = auth != null ? auth.getName() : "anonymous";
+        log.warn("SECURITY: Access denied for principal={}", principal);
         return buildErrorResponse(HttpStatus.FORBIDDEN, "Access denied");
     }
 

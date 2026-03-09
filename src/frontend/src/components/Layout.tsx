@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, List, Package, Menu, X } from 'lucide-react';
+import { LayoutDashboard, List, Package, Menu, X, Shield } from 'lucide-react';
+import FocusTrap from 'focus-trap-react';
 import { UserMenu } from './UserMenu';
+import { useAuth } from '../contexts/AuthContext';
 import { cn } from '@/lib/utils';
 
 interface LayoutProps {
@@ -10,6 +12,7 @@ interface LayoutProps {
 
 export default function Layout({ children }: LayoutProps) {
   const location = useLocation();
+  const { isAdmin } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
@@ -28,6 +31,7 @@ export default function Layout({ children }: LayoutProps) {
   const navItems = [
     { to: '/dashboard', label: 'Tableau de bord', icon: LayoutDashboard },
     { to: '/lists', label: 'Mes Listes', icon: List },
+    ...(isAdmin ? [{ to: '/admin/users', label: 'Utilisateurs', icon: Shield }] : []),
   ];
 
   return (
@@ -55,63 +59,73 @@ export default function Layout({ children }: LayoutProps) {
       )}
 
       {/* Sidebar */}
-      <aside
-        className={cn(
-          'w-64 bg-background border-r fixed h-full flex flex-col z-50 transition-transform duration-300 ease-in-out',
-          sidebarOpen ? 'translate-x-0' : '-translate-x-full',
-          'md:translate-x-0 md:static md:z-auto md:h-screen md:sticky md:top-0'
-        )}
+      <FocusTrap
+        active={sidebarOpen}
+        focusTrapOptions={{
+          clickOutsideDeactivates: true,
+          escapeDeactivates: true,
+          allowOutsideClick: true,
+          fallbackFocus: () => document.querySelector('[aria-label="Navigation principale"]') as HTMLElement,
+        }}
       >
-        <div className="p-6 border-b">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-brand/10 rounded-xl flex items-center justify-center">
-                <Package className="h-5 w-5 text-brand" />
+        <aside
+          className={cn(
+            'w-64 bg-background border-r fixed h-full flex flex-col z-50 transition-transform duration-300 ease-in-out',
+            sidebarOpen ? 'translate-x-0' : '-translate-x-full',
+            'md:translate-x-0 md:static md:z-auto md:h-screen md:sticky md:top-0'
+          )}
+        >
+          <div className="p-6 border-b">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-brand/10 rounded-xl flex items-center justify-center" aria-label="Logo Inventory">
+                  <Package className="h-5 w-5 text-brand" aria-hidden="true" />
+                </div>
+                <span className="font-display text-xl font-semibold tracking-tight">Inventory</span>
               </div>
-              <span className="font-display text-xl font-semibold tracking-tight">Inventory</span>
-            </div>
-            <button
-              onClick={() => setSidebarOpen(false)}
-              aria-label="Fermer le menu"
-              className="md:hidden p-1 text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <X className="h-5 w-5" />
-            </button>
-          </div>
-        </div>
-
-        <nav aria-label="Navigation principale" className="p-4 space-y-1 flex-1">
-          {navItems.map((item) => {
-            const isActive = location.pathname === item.to ||
-              (item.to !== '/' && location.pathname.startsWith(item.to + '/'));
-            return (
-              <Link
-                key={item.to}
-                to={item.to}
-                className={cn(
-                  'group flex items-center px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200',
-                  isActive
-                    ? 'text-foreground bg-secondary'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
-                )}
+              <button
+                onClick={() => setSidebarOpen(false)}
+                aria-label="Fermer le menu"
+                className="md:hidden p-1 text-muted-foreground hover:text-foreground transition-colors"
               >
-                <item.icon className={cn(
-                  'h-5 w-5 mr-3 transition-transform duration-200',
-                  !isActive && 'group-hover:scale-110'
-                )} />
-                {item.label}
-                {isActive && (
-                  <div className="ml-auto w-1.5 h-1.5 rounded-full bg-foreground" />
-                )}
-              </Link>
-            );
-          })}
-        </nav>
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+          </div>
 
-        <div className="p-4 border-t">
-          <UserMenu />
-        </div>
-      </aside>
+          <nav aria-label="Navigation principale" className="p-4 space-y-1 flex-1">
+            {navItems.map((item) => {
+              const isActive = location.pathname === item.to ||
+                (item.to !== '/' && location.pathname.startsWith(item.to + '/'));
+              return (
+                <Link
+                  key={item.to}
+                  to={item.to}
+                  className={cn(
+                    'group flex items-center px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200',
+                    isActive
+                      ? 'text-foreground bg-secondary'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
+                  )}
+                >
+                  <item.icon className={cn(
+                    'h-5 w-5 mr-3 transition-transform duration-200',
+                    !isActive && 'group-hover:scale-110'
+                  )} />
+                  {item.label}
+                  {isActive && (
+                    <div className="ml-auto w-1.5 h-1.5 rounded-full bg-foreground" />
+                  )}
+                </Link>
+              );
+            })}
+          </nav>
+
+          <div className="p-4 border-t">
+            <UserMenu />
+          </div>
+        </aside>
+      </FocusTrap>
 
       <main className="flex-1 p-4 md:p-8 lg:p-12">
         {children}

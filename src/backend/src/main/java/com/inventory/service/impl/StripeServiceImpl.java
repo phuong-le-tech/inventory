@@ -155,6 +155,13 @@ public class StripeServiceImpl implements IStripeService {
             return;
         }
 
+        if (session.getCurrency() == null || !priceCurrency.equalsIgnoreCase(session.getCurrency())) {
+            log.error("Currency mismatch for session {}: got={}, expected={}",
+                session.getId(), session.getCurrency(), priceCurrency);
+            Sentry.captureMessage("Stripe webhook: currency mismatch for session " + session.getId());
+            return;
+        }
+
         Optional<UUID> userId = extractUserIdFromMetadata(session.getMetadata(), "session " + session.getId());
         if (userId.isEmpty()) {
             return;
@@ -178,6 +185,13 @@ public class StripeServiceImpl implements IStripeService {
         if (paymentIntent.getAmount() == null || paymentIntent.getAmount() < priceAmount) {
             log.debug("PaymentIntent {} amount {} below premium price {}, skipping",
                 paymentIntent.getId(), paymentIntent.getAmount(), priceAmount);
+            return;
+        }
+
+        if (paymentIntent.getCurrency() == null || !priceCurrency.equalsIgnoreCase(paymentIntent.getCurrency())) {
+            log.error("Currency mismatch for PaymentIntent {}: got={}, expected={}",
+                paymentIntent.getId(), paymentIntent.getCurrency(), priceCurrency);
+            Sentry.captureMessage("Stripe webhook: currency mismatch for PaymentIntent " + paymentIntent.getId());
             return;
         }
 

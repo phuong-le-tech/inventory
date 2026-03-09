@@ -1,13 +1,17 @@
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import {
   Package,
   Inbox,
   AlertTriangle,
   XCircle,
-  MoreVertical,
   Plus,
+  Pencil,
+  Eye,
 } from "lucide-react";
-import { useDashboardStats } from "../hooks/useDashboardStats";
+import { dashboardApi } from "../services/api";
+import { queryKeys } from "../lib/queryKeys";
 import {
   SkeletonStatCard,
   SkeletonText,
@@ -21,6 +25,13 @@ import {
 } from "@/components/effects/staggered-list";
 import { STATUS_LABELS, ItemStatus } from "../types/item";
 import { Badge } from "@/components/ui/badge";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import ListCombobox from "../components/ListCombobox";
 
 const statusToBadgeVariant: Record<string, "success" | "warning" | "error"> = {
   IN_STOCK: "success",
@@ -29,8 +40,21 @@ const statusToBadgeVariant: Record<string, "success" | "warning" | "error"> = {
 };
 
 export default function Dashboard() {
-  const { stats, loading, error, reload } = useDashboardStats();
+  const { data: stats, isLoading: loading, error, refetch: reload } = useQuery({
+    queryKey: queryKeys.dashboard.stats(),
+    queryFn: () => dashboardApi.getStats(),
+  });
   const navigate = useNavigate();
+  const [showAddItem, setShowAddItem] = useState(false);
+  const [selectedListId, setSelectedListId] = useState("");
+
+  // Reset state on unmount to prevent stale state on navigation
+  useEffect(() => {
+    return () => {
+      setShowAddItem(false);
+      setSelectedListId("");
+    };
+  }, []);
 
   if (loading) {
     return (
@@ -65,7 +89,7 @@ export default function Dashboard() {
         <p className="text-muted-foreground mb-6 max-w-sm">
           Une erreur est survenue lors du chargement du tableau de bord.
         </p>
-        <Button onClick={reload}>Réessayer</Button>
+        <Button onClick={() => reload()}>Réessayer</Button>
       </div>
     );
   }
@@ -76,24 +100,28 @@ export default function Dashboard() {
       value: stats?.totalItems || 0,
       subtext: "Toutes listes confondues",
       icon: Package,
+      iconColor: "text-muted-foreground",
     },
     {
       label: "Quantité totale",
       value: stats?.totalQuantity || 0,
       subtext: "Unités en inventaire",
       icon: Inbox,
+      iconColor: "text-muted-foreground",
     },
     {
       label: "Stock faible",
       value: stats?.lowStockCount || 0,
       subtext: "À réapprovisionner",
       icon: AlertTriangle,
+      iconColor: "text-amber-500",
     },
     {
       label: "Rupture de stock",
       value: stats?.outOfStockCount || 0,
       subtext: "Articles indisponibles",
       icon: XCircle,
+      iconColor: "text-red-500",
     },
   ];
 
@@ -107,7 +135,7 @@ export default function Dashboard() {
 
 
   return (
-    <div className="space-y-10 pb-10">
+    <div className="max-w-7xl mx-auto space-y-10 pb-10">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <BlurFade delay={0.1}>
@@ -122,12 +150,38 @@ export default function Dashboard() {
           </BlurFade>
         </div>
         <BlurFade delay={0.3}>
-          <Button className="font-medium" asChild>
-            <Link to="/items/new">
+          {showAddItem ? (
+            <div className="flex items-center gap-2 w-64">
+              <div className="flex-1">
+                <ListCombobox
+                  value={selectedListId}
+                  onChange={(id) => {
+                    setSelectedListId(id);
+                    if (id) {
+                      navigate(`/lists/${id}/items/new`);
+                      setShowAddItem(false);
+                      setSelectedListId("");
+                    }
+                  }}
+                />
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setShowAddItem(false);
+                  setSelectedListId("");
+                }}
+              >
+                Annuler
+              </Button>
+            </div>
+          ) : (
+            <Button className="font-medium" onClick={() => setShowAddItem(true)}>
               <Plus className="h-4 w-4 mr-2" />
               Ajouter un article
-            </Link>
-          </Button>
+            </Button>
+          )}
         </BlurFade>
       </div>
 
@@ -143,7 +197,7 @@ export default function Dashboard() {
                 <span className="font-medium text-sm text-foreground">
                   {card.label}
                 </span>
-                <card.icon className="h-4 w-4 text-muted-foreground" />
+                <card.icon className={`h-4 w-4 ${card.iconColor}`} />
               </div>
               <div>
                 <div className="text-3xl font-display font-bold tracking-tight mb-1">
@@ -157,6 +211,29 @@ export default function Dashboard() {
           </StaggeredItem>
         ))}
       </StaggeredList>
+
+      {/* Onboarding empty state */}
+      {stats?.totalItems === 0 && (
+        <BlurFade delay={0.4}>
+          <div className="rounded-xl border bg-card p-8 text-center shadow-sm">
+            <div className="w-14 h-14 bg-brand/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <Package className="h-7 w-7 text-brand" />
+            </div>
+            <h2 className="font-display text-xl font-semibold tracking-tight mb-2">
+              Bienvenue sur votre tableau de bord
+            </h2>
+            <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+              Commencez par créer votre première liste pour organiser vos articles et suivre votre inventaire.
+            </p>
+            <Button asChild>
+              <Link to="/lists/new">
+                <Plus className="h-4 w-4 mr-2" />
+                Créer ma première liste
+              </Link>
+            </Button>
+          </div>
+        </BlurFade>
+      )}
 
       {/* Lists Overview */}
       {stats?.listsOverview && stats.listsOverview.length > 0 && (
@@ -222,9 +299,6 @@ export default function Dashboard() {
                         Nom de l'article
                       </th>
                       <th className="px-5 py-3 font-medium">Liste</th>
-                      <th className="px-5 py-3 font-medium hidden sm:table-cell">
-                        SKU
-                      </th>
                       <th className="px-5 py-3 font-medium">Quantité</th>
                       <th className="px-5 py-3 font-medium">Statut</th>
                       <th className="px-5 py-3 font-medium hidden md:table-cell">
@@ -238,7 +312,7 @@ export default function Dashboard() {
                       <tr
                         key={idx}
                         className="hover:bg-muted/30 transition-colors group cursor-pointer"
-                        onClick={() => navigate(`/items/${item.id}`)}
+                        onClick={() => navigate(`/lists/${item.listId}/items/${item.id}/edit`)}
                       >
                         <td className="px-5 py-4">
                           <div className="font-medium text-foreground">
@@ -252,9 +326,6 @@ export default function Dashboard() {
                               {item.listName}
                             </span>
                           </div>
-                        </td>
-                        <td className="px-5 py-4 text-muted-foreground hidden sm:table-cell">
-                          {item.sku || "-"}
                         </td>
                         <td className="px-5 py-4 font-medium text-foreground">
                           {item.quantity}
@@ -272,14 +343,29 @@ export default function Dashboard() {
                           )}
                         </td>
                         <td className="px-5 py-4 text-right">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            aria-label="Options de l'article"
-                            className="h-8 w-8 text-muted-foreground opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
-                          >
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                aria-label="Options de l'article"
+                                className="h-8 w-8 text-muted-foreground opacity-100 md:opacity-0 md:group-hover:opacity-100 focus-visible:opacity-100 transition-opacity"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                              <DropdownMenuItem onClick={() => navigate(`/lists/${item.listId}`)}>
+                                <Eye className="h-4 w-4 mr-2" />
+                                Voir la liste
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => navigate(`/lists/${item.listId}/items/${item.id}/edit`)}>
+                                <Pencil className="h-4 w-4 mr-2" />
+                                Modifier l'article
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </td>
                       </tr>
                     ))}

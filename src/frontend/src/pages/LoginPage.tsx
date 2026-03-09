@@ -45,7 +45,7 @@ export function LoginPage() {
     } catch (err: unknown) {
       if (getApiErrorStatus(err) === 403) {
         setIsUnverified(true);
-        setServerError('Votre compte n\'est pas encore verifie. Consultez votre email.');
+        setServerError('Votre compte n\'est pas encore vérifié. Consultez votre email.');
       } else {
         setServerError(getApiErrorMessage(err, 'Email ou mot de passe invalide'));
       }
@@ -90,7 +90,7 @@ export function LoginPage() {
               <h1 className="font-display text-4xl font-semibold tracking-tight mb-2">Inventory</h1>
             </BlurFade>
             <BlurFade delay={0.4}>
-              <p className="text-muted-foreground">Connectez-vous pour gerer votre inventaire</p>
+              <p className="text-muted-foreground">Connectez-vous pour gérer votre inventaire</p>
             </BlurFade>
           </div>
 
@@ -99,14 +99,14 @@ export function LoginPage() {
               {verified && (
                 <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg px-4 py-3 text-green-700 dark:text-green-400 text-sm flex items-center gap-2">
                   <CheckCircle className="h-4 w-4 flex-shrink-0" />
-                  Email verifie avec succes ! Vous pouvez maintenant vous connecter.
+                  Email vérifié avec succès ! Vous pouvez maintenant vous connecter.
                 </div>
               )}
 
               {reset && (
                 <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg px-4 py-3 text-green-700 dark:text-green-400 text-sm flex items-center gap-2">
                   <CheckCircle className="h-4 w-4 flex-shrink-0" />
-                  Mot de passe reinitialise avec succes ! Connectez-vous avec votre nouveau mot de passe.
+                  Mot de passe réinitialisé avec succès ! Connectez-vous avec votre nouveau mot de passe.
                 </div>
               )}
 
@@ -115,7 +115,7 @@ export function LoginPage() {
                   {serverError}
                   {isUnverified && (
                     <Link to="/verify-email" className="block mt-1 font-medium underline">
-                      Renvoyer l'email de verification
+                      Renvoyer l'email de vérification
                     </Link>
                   )}
                 </div>
@@ -129,9 +129,11 @@ export function LoginPage() {
                   {...register('email')}
                   className={errors.email ? 'border-destructive focus-visible:ring-destructive' : ''}
                   placeholder="vous@exemple.com"
+                  aria-invalid={!!errors.email}
+                  aria-describedby={errors.email ? 'email-error' : undefined}
                 />
                 {errors.email && (
-                  <p className="text-sm text-destructive flex items-center gap-1.5">
+                  <p id="email-error" role="alert" className="text-sm text-destructive flex items-center gap-1.5">
                     <AlertCircle className="h-4 w-4 flex-shrink-0" />
                     {errors.email.message}
                   </p>
@@ -142,7 +144,7 @@ export function LoginPage() {
                 <div className="flex items-center justify-between">
                   <Label htmlFor="password">Mot de passe</Label>
                   <Link to="/forgot-password" className="text-xs text-muted-foreground hover:text-foreground hover:underline">
-                    Mot de passe oublie ?
+                    Mot de passe oublié ?
                   </Link>
                 </div>
                 <Input
@@ -151,9 +153,11 @@ export function LoginPage() {
                   {...register('password')}
                   className={errors.password ? 'border-destructive focus-visible:ring-destructive' : ''}
                   placeholder="Entrez votre mot de passe"
+                  aria-invalid={!!errors.password}
+                  aria-describedby={errors.password ? 'password-error' : undefined}
                 />
                 {errors.password && (
-                  <p className="text-sm text-destructive flex items-center gap-1.5">
+                  <p id="password-error" role="alert" className="text-sm text-destructive flex items-center gap-1.5">
                     <AlertCircle className="h-4 w-4 flex-shrink-0" />
                     {errors.password.message}
                   </p>
@@ -192,7 +196,7 @@ export function LoginPage() {
           <p className="mt-6 text-center text-muted-foreground text-sm">
             Nouveau sur Inventory ?{' '}
             <Link to="/signup" className="text-foreground font-medium hover:underline">
-              Creer un compte
+              Créer un compte
             </Link>
           </p>
         </motion.div>

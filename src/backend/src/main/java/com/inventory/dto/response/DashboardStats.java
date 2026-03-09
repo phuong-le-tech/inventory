@@ -22,8 +22,8 @@ public record DashboardStats(
     public record RecentItemDto(
             String id,
             String name,
+            String listId,
             String listName,
-            String sku,
             long quantity,
             String status,
             java.time.LocalDateTime lastUpdated) {

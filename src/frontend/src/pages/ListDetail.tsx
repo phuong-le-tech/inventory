@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import {
   ArrowLeft,
@@ -9,11 +9,9 @@ import {
   List,
   MoreHorizontal,
 } from "lucide-react";
-import axios from "axios";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { listsApi, itemsApi } from "../services/api";
 import {
-  ItemList,
-  Item,
   ItemStatus,
   formatStatus,
   STATUS_OPTIONS,
@@ -39,6 +37,8 @@ import {
   StaggeredItem,
 } from "@/components/effects/staggered-list";
 import { cn } from "@/lib/utils";
+import { queryKeys } from "../lib/queryKeys";
+import { Breadcrumb } from "../components/Breadcrumb";
 
 const ITEMS_PER_PAGE = 12;
 
@@ -55,93 +55,67 @@ export default function ListDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { showToast } = useToast();
+  const queryClient = useQueryClient();
 
-  const [list, setList] = useState<ItemList | null>(null);
-  const [listLoading, setListLoading] = useState(true);
-  const [items, setItems] = useState<Item[]>([]);
-  const [itemsLoading, setItemsLoading] = useState(true);
-  const [itemPage, setItemPage] = useState(0);
-  const [itemTotalPages, setItemTotalPages] = useState(0);
-  const [itemTotalElements, setItemTotalElements] = useState(0);
-  const [itemsReloadKey, setItemsReloadKey] = useState(0);
-  const [deletingItemId, setDeletingItemId] = useState<string | null>(null);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<ItemStatus | "">("");
+  const [itemPage, setItemPage] = useState(0);
 
-  useEffect(() => {
-    if (!id) return;
-    const controller = new AbortController();
-    const load = async () => {
-      setListLoading(true);
-      try {
-        const listData = await listsApi.getById(id, controller.signal);
-        if (!controller.signal.aborted) setList(listData);
-      } catch (err) {
-        if (!axios.isCancel(err) && !controller.signal.aborted) {
-          showToast("Echec du chargement de la liste", "error");
-          navigate("/lists");
-        }
-      } finally {
-        if (!controller.signal.aborted) setListLoading(false);
-      }
-    };
-    load();
-    return () => controller.abort();
-  }, [id, navigate, showToast]);
+  const { data: list, isLoading: listLoading, error: listError } = useQuery({
+    queryKey: queryKeys.lists.detail(id!),
+    queryFn: () => listsApi.getById(id!),
+    enabled: !!id,
+  });
 
+  // Navigate away on list fetch error
   useEffect(() => {
-    if (!id) return;
-    const controller = new AbortController();
-    const load = async () => {
-      setItemsLoading(true);
-      try {
-        const response = await itemsApi.getAll(
-          {
-            itemListId: id,
-            status: statusFilter || undefined,
-            page: itemPage,
-            size: ITEMS_PER_PAGE,
-            sortBy: "createdAt",
-            sortDir: "desc",
-          },
-          controller.signal,
-        );
-        if (!controller.signal.aborted) {
-          setItems(response.content);
-          setItemTotalPages(response.totalPages);
-          setItemTotalElements(response.totalElements);
-        }
-      } catch (err) {
-        if (!axios.isCancel(err) && !controller.signal.aborted) {
-          showToast("Echec du chargement des articles", "error");
-        }
-      } finally {
-        if (!controller.signal.aborted) setItemsLoading(false);
-      }
-    };
-    load();
-    return () => controller.abort();
-  }, [id, statusFilter, itemPage, itemsReloadKey, showToast]);
+    if (listError && !list) {
+      showToast("Échec du chargement de la liste", "error");
+      navigate("/lists");
+    }
+  }, [listError, list, showToast, navigate]);
+
+  const itemParams = {
+    itemListId: id!,
+    status: statusFilter || undefined,
+    page: itemPage,
+    size: ITEMS_PER_PAGE,
+    sortBy: "createdAt",
+    sortDir: "desc" as const,
+  };
+  const { data: itemsData, isLoading: itemsLoading } = useQuery({
+    queryKey: queryKeys.items.list(itemParams),
+    queryFn: () => itemsApi.getAll(itemParams),
+    enabled: !!id,
+  });
+
+  const items = itemsData?.content ?? [];
+  const itemTotalPages = itemsData?.totalPages ?? 0;
+  const itemTotalElements = itemsData?.totalElements ?? 0;
+
+  const deleteMutation = useMutation({
+    mutationFn: (itemId: string) => itemsApi.delete(itemId),
+    onSuccess: () => {
+      showToast("Article supprimé avec succès", "success");
+      queryClient.invalidateQueries({ queryKey: queryKeys.items.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.lists.detail(id!) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
+    },
+    onError: () => {
+      showToast("Échec de la suppression de l'article", "error");
+    },
+  });
 
   const handleStatusFilterChange = (value: string) => {
     setStatusFilter(value as ItemStatus | "");
     setItemPage(0);
   };
 
-  const handleDeleteConfirm = async () => {
+  const handleDeleteConfirm = () => {
     if (!pendingDeleteId) return;
     const itemId = pendingDeleteId;
     setPendingDeleteId(null);
-    setDeletingItemId(itemId);
-    try {
-      await itemsApi.delete(itemId);
-      showToast("Article supprimé avec succès", "success");
-      setItemsReloadKey((k) => k + 1);
-    } catch {
-      showToast("Échec de la suppression de l'article", "error");
-    } finally {
-      setDeletingItemId(null);
-    }
+    deleteMutation.mutate(itemId);
   };
 
   if (listLoading) {
@@ -184,14 +158,8 @@ export default function ListDetail() {
   }
 
   return (
-    <div className="animate-fade-in">
-      <button
-        onClick={() => navigate("/lists")}
-        className="inline-flex items-center text-muted-foreground hover:text-foreground mb-8 transition-all duration-200 hover:-translate-x-0.5 group text-sm"
-      >
-        <ArrowLeft className="h-4 w-4 mr-1.5 transition-transform group-hover:-translate-x-0.5" />
-        Retour aux listes
-      </button>
+    <div className="max-w-7xl mx-auto animate-fade-in">
+      <Breadcrumb items={[{ label: 'Mes Listes', href: '/lists' }, { label: list.name }]} />
 
       {/* Full-width header banner */}
       <div className="mb-8">
@@ -236,9 +204,11 @@ export default function ListDetail() {
 
       {/* Status filter pills */}
       <div className="flex items-center justify-between mb-6 gap-4">
-        <div className="flex gap-2 flex-wrap">
+        <div className="flex gap-2 flex-wrap" role="tablist" aria-label="Filtrer par statut">
           <button
             onClick={() => handleStatusFilterChange("")}
+            role="tab"
+            aria-selected={statusFilter === ""}
             className={cn(
               "px-4 py-1.5 rounded-full text-sm font-medium transition-all duration-200 border",
               statusFilter === ""
@@ -252,6 +222,8 @@ export default function ListDetail() {
             <button
               key={status}
               onClick={() => handleStatusFilterChange(status)}
+              role="tab"
+              aria-selected={statusFilter === status}
               className={cn(
                 "px-4 py-1.5 rounded-full text-sm font-medium transition-all duration-200 border",
                 statusFilter === status
@@ -287,6 +259,7 @@ export default function ListDetail() {
                       <img
                         src={getItemImageUrl(item.id)}
                         alt={item.name}
+                        loading="lazy"
                         className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                       />
                     ) : (
@@ -299,7 +272,7 @@ export default function ListDetail() {
                         {formatStatus(item.status)}
                       </Badge>
                     </div>
-                    <div className="absolute top-3 left-3 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                    <div className="absolute top-3 left-3 opacity-100 md:opacity-0 md:group-hover:opacity-100 md:focus-within:opacity-100 transition-opacity">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button
@@ -322,7 +295,7 @@ export default function ListDetail() {
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             onClick={() => setPendingDeleteId(item.id)}
-                            disabled={deletingItemId === item.id}
+                            disabled={deleteMutation.isPending && deleteMutation.variables === item.id}
                             className="text-destructive focus:text-destructive"
                           >
                             <Trash2 className="h-4 w-4 mr-2" />
