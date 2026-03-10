@@ -24,7 +24,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { BlurFade } from "@/components/effects/blur-fade";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import { Breadcrumb } from "../components/Breadcrumb";
@@ -95,8 +101,14 @@ export default function ItemForm() {
     schemaRef.current = createItemSchema(fieldDefs);
   }, [fieldDefs]);
 
-  const { data: itemData, isLoading: itemLoading, error: itemError } = useQuery({
-    queryKey: itemId ? queryKeys.items.detail(itemId) : ['items', 'detail', null],
+  const {
+    data: itemData,
+    isLoading: itemLoading,
+    error: itemError,
+  } = useQuery({
+    queryKey: itemId
+      ? queryKeys.items.detail(itemId)
+      : ["items", "detail", null],
     queryFn: () => itemsApi.getById(itemId!),
     enabled: isEditing && !!itemId,
   });
@@ -230,7 +242,9 @@ export default function ItemForm() {
       }
       navigate(`/lists/${data.itemListId}`);
       queryClient.invalidateQueries({ queryKey: queryKeys.items.all });
-      queryClient.invalidateQueries({ queryKey: queryKeys.lists.detail(data.itemListId) });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.lists.detail(data.itemListId),
+      });
       queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all });
     } catch {
       showToast("Échec de l'enregistrement. Veuillez réessayer.", "error");
@@ -265,11 +279,11 @@ export default function ItemForm() {
     <div className="max-w-7xl mx-auto animate-fade-in">
       <Breadcrumb
         items={[
-          { label: 'Mes Listes', href: '/lists' },
+          { label: "Mes Listes", href: "/lists" },
           ...(listId
-            ? [{ label: selectedListName || '...', href: `/lists/${listId}` }]
+            ? [{ label: selectedListName || "...", href: `/lists/${listId}` }]
             : []),
-          { label: isEditing ? 'Modifier' : 'Nouvel article' },
+          { label: isEditing ? "Modifier" : "Nouvel article" },
         ]}
       />
 
@@ -297,19 +311,23 @@ export default function ItemForm() {
                 }
                 placeholder="Entrez le nom de l'article"
                 aria-invalid={!!errors.name}
-                aria-describedby={errors.name ? 'item-name-error' : undefined}
+                aria-describedby={errors.name ? "item-name-error" : undefined}
               />
               <div className="flex justify-between items-center">
                 <div>
                   {errors.name && (
-                    <p id="item-name-error" role="alert" className="text-sm text-destructive flex items-center">
+                    <p
+                      id="item-name-error"
+                      role="alert"
+                      className="text-sm text-destructive flex items-center"
+                    >
                       <AlertCircle className="h-4 w-4 mr-1.5" />
                       {errors.name.message}
                     </p>
                   )}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  {(nameValue?.length ?? 0)}/200
+                  {nameValue?.length ?? 0}/200
                 </p>
               </div>
             </div>
@@ -326,12 +344,18 @@ export default function ItemForm() {
                     onChange={field.onChange}
                     error={Boolean(errors.itemListId)}
                     aria-invalid={!!errors.itemListId}
-                    aria-describedby={errors.itemListId ? 'item-list-error' : undefined}
+                    aria-describedby={
+                      errors.itemListId ? "item-list-error" : undefined
+                    }
                   />
                 )}
               />
               {errors.itemListId && (
-                <p id="item-list-error" role="alert" className="text-sm text-destructive flex items-center">
+                <p
+                  id="item-list-error"
+                  role="alert"
+                  className="text-sm text-destructive flex items-center"
+                >
                   <AlertCircle className="h-4 w-4 mr-1.5" />
                   {errors.itemListId.message}
                 </p>
@@ -353,10 +377,16 @@ export default function ItemForm() {
                   }
                   placeholder="0"
                   aria-invalid={!!errors.stock}
-                  aria-describedby={errors.stock ? 'item-stock-error' : undefined}
+                  aria-describedby={
+                    errors.stock ? "item-stock-error" : undefined
+                  }
                 />
                 {errors.stock && (
-                  <p id="item-stock-error" role="alert" className="text-sm text-destructive flex items-center">
+                  <p
+                    id="item-stock-error"
+                    role="alert"
+                    className="text-sm text-destructive flex items-center"
+                  >
                     <AlertCircle className="h-4 w-4 mr-1.5" />
                     {errors.stock.message}
                   </p>
@@ -428,7 +458,9 @@ export default function ItemForm() {
                           }
                           placeholder={`Entrez ${def.label.toLowerCase()}`}
                           aria-invalid={!!fieldError}
-                          aria-describedby={fieldError ? `${fieldId}-error` : undefined}
+                          aria-describedby={
+                            fieldError ? `${fieldId}-error` : undefined
+                          }
                         />
                       )}
 
@@ -448,7 +480,9 @@ export default function ItemForm() {
                           }
                           placeholder="0"
                           aria-invalid={!!fieldError}
-                          aria-describedby={fieldError ? `${fieldId}-error` : undefined}
+                          aria-describedby={
+                            fieldError ? `${fieldId}-error` : undefined
+                          }
                         />
                       )}
 
@@ -464,7 +498,9 @@ export default function ItemForm() {
                               : ""
                           }
                           aria-invalid={!!fieldError}
-                          aria-describedby={fieldError ? `${fieldId}-error` : undefined}
+                          aria-describedby={
+                            fieldError ? `${fieldId}-error` : undefined
+                          }
                         />
                       )}
 
@@ -497,12 +533,19 @@ export default function ItemForm() {
                           control={control}
                           defaultValue=""
                           render={({ field }) => (
-                            <Select value={field.value || undefined} onValueChange={field.onChange}>
+                            <Select
+                              value={field.value || undefined}
+                              onValueChange={field.onChange}
+                            >
                               <SelectTrigger
                                 id={fieldId}
-                                className={fieldError ? "border-destructive" : ""}
+                                className={
+                                  fieldError ? "border-destructive" : ""
+                                }
                                 aria-invalid={!!fieldError}
-                                aria-describedby={fieldError ? `${fieldId}-error` : undefined}
+                                aria-describedby={
+                                  fieldError ? `${fieldId}-error` : undefined
+                                }
                               >
                                 <SelectValue placeholder="-- Choisir --" />
                               </SelectTrigger>
@@ -519,7 +562,11 @@ export default function ItemForm() {
                       )}
 
                       {fieldError && (
-                        <p id={`${fieldId}-error`} role="alert" className="text-sm text-destructive flex items-center">
+                        <p
+                          id={`${fieldId}-error`}
+                          role="alert"
+                          className="text-sm text-destructive flex items-center"
+                        >
                           <AlertCircle className="h-4 w-4 mr-1.5" />
                           {fieldError.message}
                         </p>
@@ -542,7 +589,8 @@ export default function ItemForm() {
                     imagePreview
                       ? "border-transparent p-0"
                       : "border-border p-8 hover:border-brand-dark hover:bg-brand-light/30",
-                    isDragging && "border-brand-dark bg-brand-light/40 scale-[1.02]"
+                    isDragging &&
+                      "border-brand-dark bg-brand-light/40 scale-[1.02]",
                   )}
                   onDragEnter={handleDragEnter}
                   onDragOver={handleDragOver}
@@ -564,15 +612,23 @@ export default function ItemForm() {
                     </div>
                   ) : (
                     <>
-                      <Upload className={cn(
-                        "h-10 w-10 text-muted-foreground/50 mb-3 group-hover:text-brand-dark transition-all duration-200",
-                        isDragging ? "text-brand-dark scale-110" : "group-hover:scale-110"
-                      )} />
-                      <span className={cn(
-                        "text-sm font-medium text-muted-foreground group-hover:text-foreground transition-colors",
-                        isDragging && "text-foreground"
-                      )}>
-                        {isDragging ? "Déposez l'image ici" : "Télécharger une image"}
+                      <Upload
+                        className={cn(
+                          "h-10 w-10 text-muted-foreground/50 mb-3 group-hover:text-brand-dark transition-all duration-200",
+                          isDragging
+                            ? "text-brand-dark scale-110"
+                            : "group-hover:scale-110",
+                        )}
+                      />
+                      <span
+                        className={cn(
+                          "text-sm font-medium text-muted-foreground group-hover:text-foreground transition-colors",
+                          isDragging && "text-foreground",
+                        )}
+                      >
+                        {isDragging
+                          ? "Déposez l'image ici"
+                          : "Télécharger une image"}
                       </span>
                       <p className="text-xs text-muted-foreground mt-1">
                         PNG, JPG, GIF jusqu'à 10 Mo
@@ -626,7 +682,6 @@ export default function ItemForm() {
           </Button>
         </div>
       </form>
-
     </div>
   );
 }
