@@ -26,6 +26,7 @@ Thumbs.db
 # Environment
 .env
 .env.dev
+.env.prod
 *.env.local
 
 CLAUDE.md

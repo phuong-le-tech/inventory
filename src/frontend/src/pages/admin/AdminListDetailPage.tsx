@@ -14,6 +14,7 @@ import { BlurFade } from '@/components/effects/blur-fade';
 import { Breadcrumb } from '../../components/Breadcrumb';
 import { SkeletonText } from '../../components/Skeleton';
 import { cn } from '@/lib/utils';
+import { sanitizeImageUrl } from '../../utils/imageUtils';
 
 const ITEMS_PER_PAGE = 20;
 
@@ -213,13 +214,14 @@ export function AdminListDetailPage() {
                   >
                     <TableCell className="py-5">
                       <div className="flex items-center gap-3">
-                        {item.hasImage ? (
+                        {sanitizeImageUrl(item.imageUrl) ? (
                           <div className="h-10 w-10 rounded-lg bg-muted overflow-hidden flex-shrink-0">
                             <img
-                              src={`/api/v1/items/${item.id}/image`}
-                              alt=""
+                              src={sanitizeImageUrl(item.imageUrl)!}
+                              alt={item.name}
                               className="h-full w-full object-cover"
                               loading="lazy"
+                              onError={(e) => { e.currentTarget.style.display = 'none'; }}
                             />
                           </div>
                         ) : (

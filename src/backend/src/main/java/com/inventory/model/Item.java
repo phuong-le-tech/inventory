@@ -58,6 +58,9 @@ public class Item {
     @Column(name = "content_type")
     private String contentType;
 
+    @Column(name = "image_key", length = 500)
+    private String imageKey;
+
     @CreationTimestamp
     @Column(name = "created_at")
     private LocalDateTime createdAt;

@@ -22,6 +22,7 @@ import com.inventory.dto.request.ItemSearchCriteria;
 import com.inventory.exception.ItemListNotFoundException;
 import com.inventory.security.CustomUserDetails;
 import com.inventory.service.IUserService;
+import com.inventory.service.ImageStorageService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -56,6 +57,7 @@ public class AdminController {
     private final IUserService userService;
     private final ItemListRepository itemListRepository;
     private final ItemRepository itemRepository;
+    private final ImageStorageService imageStorageService;
 
     @GetMapping("/users")
     public ResponseEntity<PageResponse<UserResponse>> getAllUsers(
@@ -193,7 +195,7 @@ public class AdminController {
     ) {
         ItemList list = itemListRepository.findById(id)
             .orElseThrow(() -> new ItemListNotFoundException(id));
-        return ResponseEntity.ok(ItemListResponse.fromEntity(list));
+        return ResponseEntity.ok(ItemListResponse.fromEntity(list, imageStorageService));
     }
 
     @GetMapping("/items")
@@ -219,7 +221,7 @@ public class AdminController {
         ItemSearchCriteria criteria = new ItemSearchCriteria(search, itemListId, itemStatus);
         // null userId = no user scope = admin sees all
         Page<Item> itemsPage = itemRepository.findAll(ItemSpecification.withCriteria(criteria, null), pageable);
-        Page<AdminItemResponse> responsePage = itemsPage.map(AdminItemResponse::fromEntity);
+        Page<AdminItemResponse> responsePage = itemsPage.map(item -> AdminItemResponse.fromEntity(item, imageStorageService));
         return ResponseEntity.ok(PageResponse.from(responsePage));
     }
 }

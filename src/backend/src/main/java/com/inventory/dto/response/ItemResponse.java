@@ -1,6 +1,7 @@
 package com.inventory.dto.response;
 
 import com.inventory.model.Item;
+import com.inventory.service.ImageStorageService;
 
 import java.time.LocalDateTime;
 import java.util.Map;
@@ -13,21 +14,19 @@ public record ItemResponse(
         UUID itemListId,
         String status,
         Integer stock,
-        boolean hasImage,
-        String contentType,
+        String imageUrl,
         Map<String, Object> customFieldValues,
         LocalDateTime createdAt,
         LocalDateTime updatedAt) {
 
-    public static ItemResponse fromEntity(Item item) {
+    public static ItemResponse fromEntity(Item item, ImageStorageService imageStorageService) {
         return new ItemResponse(
                 item.getId(),
                 item.getName(),
                 item.getItemList() != null ? item.getItemList().getId() : null,
                 item.getStatus() != null ? item.getStatus().name() : null,
                 item.getStock(),
-                item.getImageData() != null && item.getImageData().length > 0,
-                item.getContentType(),
+                imageStorageService.getPresignedUrl(item.getImageKey()),
                 item.getCustomFieldValues() != null
                         ? item.getCustomFieldValues()
                         : Map.of(),

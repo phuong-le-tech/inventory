@@ -74,16 +74,11 @@ export interface Item {
   itemListId: string;
   status: ItemStatus;
   stock: number;
-  hasImage: boolean;
-  contentType?: string;
+  imageUrl?: string | null;
   customFieldValues?: Record<string, unknown>;
   createdAt: string;
   updatedAt: string;
 }
-
-export const getItemImageUrl = (itemId: string): string => {
-  return `/api/v1/items/${itemId}/image`;
-};
 
 export interface ItemFormData {
   name: string;
@@ -147,7 +142,7 @@ export interface AdminItem {
   name: string;
   status: ItemStatus;
   stock: number;
-  hasImage: boolean;
+  imageUrl?: string | null;
   listId: string;
   listName: string;
   ownerId: string;

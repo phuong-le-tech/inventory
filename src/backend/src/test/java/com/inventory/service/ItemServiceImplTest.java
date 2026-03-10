@@ -41,6 +41,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
@@ -59,6 +60,12 @@ class ItemServiceImplTest {
 
     @Mock
     private SecurityUtils securityUtils;
+
+    @Mock
+    private ImageStorageService imageStorageService;
+
+    @Mock
+    private ImageProcessingService imageProcessingService;
 
     @InjectMocks
     private ItemServiceImpl itemService;
@@ -272,12 +279,14 @@ class ItemServiceImplTest {
             when(securityUtils.isAdmin()).thenReturn(true);
             when(itemListRepository.findById(testListId)).thenReturn(Optional.of(testList));
             when(itemRepository.save(any(Item.class))).thenAnswer(invocation -> invocation.getArgument(0));
+            when(imageProcessingService.processToWebP(any())).thenReturn(new byte[]{1, 2, 3});
+            when(imageStorageService.upload(anyString(), any(byte[].class), anyString())).thenReturn("items/test-key.webp");
 
             Item result = itemService.createItem(request, image);
 
-            assertThat(result.getImageData()).isNotNull();
-            assertThat(result.getContentType()).isEqualTo("image/jpeg");
-            verify(itemRepository).save(any(Item.class));
+            assertThat(result.getImageKey()).isNotNull();
+            verify(imageStorageService).upload(anyString(), any(byte[].class), eq("image/webp"));
+            verify(itemRepository, times(2)).save(any(Item.class));
         }
 
         @Test
@@ -290,10 +299,12 @@ class ItemServiceImplTest {
             when(securityUtils.isAdmin()).thenReturn(true);
             when(itemListRepository.findById(testListId)).thenReturn(Optional.of(testList));
             when(itemRepository.save(any(Item.class))).thenAnswer(invocation -> invocation.getArgument(0));
+            when(imageProcessingService.processToWebP(any())).thenReturn(new byte[]{1, 2, 3});
+            when(imageStorageService.upload(anyString(), any(byte[].class), anyString())).thenReturn("items/test-key.webp");
 
             Item result = itemService.createItem(request, image);
 
-            assertThat(result.getContentType()).isEqualTo("image/png");
+            assertThat(result.getImageKey()).isNotNull();
         }
 
         @Test
@@ -306,10 +317,12 @@ class ItemServiceImplTest {
             when(securityUtils.isAdmin()).thenReturn(true);
             when(itemListRepository.findById(testListId)).thenReturn(Optional.of(testList));
             when(itemRepository.save(any(Item.class))).thenAnswer(invocation -> invocation.getArgument(0));
+            when(imageProcessingService.processToWebP(any())).thenReturn(new byte[]{1, 2, 3});
+            when(imageStorageService.upload(anyString(), any(byte[].class), anyString())).thenReturn("items/test-key.webp");
 
             Item result = itemService.createItem(request, image);
 
-            assertThat(result.getContentType()).isEqualTo("image/gif");
+            assertThat(result.getImageKey()).isNotNull();
         }
 
         @Test
@@ -323,10 +336,12 @@ class ItemServiceImplTest {
             when(securityUtils.isAdmin()).thenReturn(true);
             when(itemListRepository.findById(testListId)).thenReturn(Optional.of(testList));
             when(itemRepository.save(any(Item.class))).thenAnswer(invocation -> invocation.getArgument(0));
+            when(imageProcessingService.processToWebP(any())).thenReturn(new byte[]{1, 2, 3});
+            when(imageStorageService.upload(anyString(), any(byte[].class), anyString())).thenReturn("items/test-key.webp");
 
             Item result = itemService.createItem(request, image);
 
-            assertThat(result.getContentType()).isEqualTo("image/webp");
+            assertThat(result.getImageKey()).isNotNull();
         }
 
         @Test
@@ -454,11 +469,13 @@ class ItemServiceImplTest {
             when(itemRepository.findById(testId)).thenReturn(Optional.of(testItem));
             when(itemListRepository.findById(testListId)).thenReturn(Optional.of(testList));
             when(itemRepository.save(any(Item.class))).thenAnswer(invocation -> invocation.getArgument(0));
+            when(imageProcessingService.processToWebP(any())).thenReturn(new byte[]{1, 2, 3});
+            when(imageStorageService.upload(anyString(), any(byte[].class), anyString())).thenReturn("items/test-key.webp");
 
             Item result = itemService.updateItem(testId, request, image);
 
-            assertThat(result.getImageData()).isNotNull();
-            assertThat(result.getContentType()).isEqualTo("image/png");
+            assertThat(result.getImageKey()).isNotNull();
+            verify(imageStorageService).upload(anyString(), any(byte[].class), eq("image/webp"));
         }
 
         @Test

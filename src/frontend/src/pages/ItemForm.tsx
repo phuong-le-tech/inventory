@@ -11,7 +11,6 @@ import {
   ItemFormData,
   STATUS_OPTIONS,
   STATUS_LABELS,
-  getItemImageUrl,
   CustomFieldDefinition,
   FIELD_TYPE_LABELS,
 } from "../types/item";
@@ -29,6 +28,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import { Breadcrumb } from "../components/Breadcrumb";
+import { sanitizeImageUrl } from "../utils/imageUtils";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const ALLOWED_FILE_TYPES = [
@@ -110,8 +110,9 @@ export default function ItemForm() {
         stock: itemData.stock,
         customFieldValues: itemData.customFieldValues || {},
       });
-      if (itemData.hasImage) {
-        setImagePreview(getItemImageUrl(itemData.id));
+      const safeUrl = sanitizeImageUrl(itemData.imageUrl);
+      if (safeUrl) {
+        setImagePreview(safeUrl);
       }
     }
   }, [itemData, reset]);
@@ -552,7 +553,7 @@ export default function ItemForm() {
                     <div className="relative w-full h-full min-h-[280px]">
                       <img
                         src={imagePreview}
-                        alt="Aperçu"
+                        alt={nameValue ? `Aperçu de ${nameValue}` : "Aperçu de l'image"}
                         className="w-full h-full object-cover rounded-2xl"
                       />
                       <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl flex items-center justify-center">

@@ -9,6 +9,7 @@ import com.inventory.dto.response.PageResponse;
 import com.inventory.exception.ItemNotFoundException;
 import com.inventory.model.Item;
 import com.inventory.service.IItemService;
+import com.inventory.service.ImageStorageService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -41,18 +42,22 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 public class ItemController {
 
     private static final Set<String> ALLOWED_SORT_FIELDS = Set.of("createdAt", "updatedAt", "name", "status", "stock");
+    private static final int IMAGE_CACHE_MAX_AGE_SECONDS = 840; // 14 minutes (under 15-min presigned URL expiry)
 
     private final IItemService itemService;
     private final ObjectMapper objectMapper;
     private final Validator validator;
     private final ApiRateLimiter uploadRateLimiter;
+    private final ImageStorageService imageStorageService;
 
     public ItemController(IItemService itemService, ObjectMapper objectMapper, Validator validator,
-                          @Qualifier("uploadRateLimiter") ApiRateLimiter uploadRateLimiter) {
+                          @Qualifier("uploadRateLimiter") ApiRateLimiter uploadRateLimiter,
+                          ImageStorageService imageStorageService) {
         this.itemService = itemService;
         this.objectMapper = objectMapper;
         this.validator = validator;
         this.uploadRateLimiter = uploadRateLimiter;
+        this.imageStorageService = imageStorageService;
     }
 
     @GetMapping
@@ -74,28 +79,39 @@ public class ItemController {
         Pageable pageable = PageRequest.of(page, size, sort);
         Page<Item> items = itemService.getAllItems(pageable, criteria);
 
-        Page<ItemResponse> responsePage = items.map(ItemResponse::fromEntity);
+        Page<ItemResponse> responsePage = items.map(item -> ItemResponse.fromEntity(item, imageStorageService));
         return PageResponse.from(responsePage);
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<ItemResponse> getItem(@PathVariable @NonNull UUID id) {
         return itemService.getItemById(id)
-                .map(item -> ResponseEntity.ok(ItemResponse.fromEntity(item)))
+                .map(item -> ResponseEntity.ok(ItemResponse.fromEntity(item, imageStorageService)))
                 .orElseThrow(() -> new ItemNotFoundException(id));
     }
 
     @GetMapping("/{id}/image")
-    public ResponseEntity<byte[]> getItemImage(@PathVariable @NonNull UUID id) {
+    public ResponseEntity<?> getItemImage(@PathVariable @NonNull UUID id) {
         Item item = itemService.getItemById(id)
                 .orElseThrow(() -> new ItemNotFoundException(id));
-        if (item.getImageData() == null || item.getImageData().length == 0) {
-            return ResponseEntity.notFound().build();
+        // Prefer R2 presigned URL redirect
+        if (item.getImageKey() != null) {
+            String presignedUrl = imageStorageService.getPresignedUrl(item.getImageKey());
+            if (presignedUrl != null) {
+                return ResponseEntity.status(HttpStatus.FOUND)
+                        .header("Location", presignedUrl)
+                        .header("Cache-Control", "private, max-age=" + IMAGE_CACHE_MAX_AGE_SECONDS)
+                        .build();
+            }
         }
-
-        return ResponseEntity.ok()
-                .contentType(MediaType.parseMediaType(Objects.requireNonNull(item.getContentType(), "Content type not found")))
-                .body(item.getImageData());
+        // Fallback: serve legacy BYTEA data
+        if (item.getImageData() != null && item.getImageData().length > 0) {
+            return ResponseEntity.ok()
+                    .contentType(MediaType.parseMediaType(
+                            Objects.requireNonNull(item.getContentType(), "Content type not found")))
+                    .body(item.getImageData());
+        }
+        return ResponseEntity.notFound().build();
     }
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -118,7 +134,7 @@ public class ItemController {
             throw new ConstraintViolationException(violations);
         }
         Item item = itemService.createItem(request, image);
-        return ResponseEntity.status(HttpStatus.CREATED).body(ItemResponse.fromEntity(item));
+        return ResponseEntity.status(HttpStatus.CREATED).body(ItemResponse.fromEntity(item, imageStorageService));
     }
 
     @PatchMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -142,7 +158,7 @@ public class ItemController {
             throw new ConstraintViolationException(violations);
         }
         Item item = itemService.updateItem(id, request, image);
-        return ItemResponse.fromEntity(item);
+        return ItemResponse.fromEntity(item, imageStorageService);
     }
 
     @DeleteMapping("/{id}")

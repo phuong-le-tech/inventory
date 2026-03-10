@@ -19,6 +19,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -30,6 +31,8 @@ import com.inventory.security.CustomUserDetails;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -54,6 +57,12 @@ class ItemControllerIntegrationTest {
 
     @Autowired
     private UserRepository userRepository;
+
+    @MockitoBean
+    private com.inventory.service.ImageProcessingService imageProcessingService;
+
+    @MockitoBean
+    private com.inventory.service.ImageStorageService imageStorageService;
 
     private ItemList testList;
     private User testUser;
@@ -118,6 +127,9 @@ class ItemControllerIntegrationTest {
         @Test
         @DisplayName("should create item with image")
         void createItemWithImage_fullFlow() throws Exception {
+            when(imageProcessingService.processToWebP(any())).thenReturn(new byte[]{1, 2, 3});
+            when(imageStorageService.getPresignedUrl(any())).thenReturn("https://r2.example.com/items/test-key.webp");
+
             ItemRequest request = new ItemRequest("Item With Image", testList.getId(), ItemStatus.AVAILABLE, 10, null);
 
             String jsonData = objectMapper.writeValueAsString(request);
@@ -130,13 +142,12 @@ class ItemControllerIntegrationTest {
                             .file(imagePart)
                             .param("data", jsonData))
                     .andExpect(status().isCreated())
-                    .andExpect(jsonPath("$.data.hasImage").value(true))
-                    .andExpect(jsonPath("$.data.contentType").value("image/jpeg"))
+                    .andExpect(jsonPath("$.data.imageUrl").value("https://r2.example.com/items/test-key.webp"))
                     .andReturn();
 
             String itemId = objectMapper.readTree(result.getResponse().getContentAsString()).get("data").get("id").asText();
             Item savedItem = itemRepository.findById(UUID.fromString(itemId)).orElseThrow();
-            assertThat(savedItem.getImageData()).isNotNull();
+            assertThat(savedItem.getImageKey()).startsWith("items/").endsWith(".webp");
         }
     }
 
