@@ -20,7 +20,16 @@ public class ImageMigrationService {
 
     @Transactional
     public void migrateItem(Item item) {
-        byte[] webpBytes = imageProcessingService.processToWebP(item.getImageData());
+        byte[] imageData = item.getImageData();
+        if (imageData == null || imageData.length == 0) {
+            log.debug("Skipping image migration for item {}: no legacy image data present", item.getId());
+            item.setImageData(null);
+            item.setContentType(null);
+            itemRepository.save(item);
+            return;
+        }
+
+        byte[] webpBytes = imageProcessingService.processToWebP(imageData);
         String imageKey = "items/" + item.getId() + "/" + UUID.randomUUID() + ".webp";
         imageStorageService.upload(imageKey, webpBytes, "image/webp");
         item.setImageKey(imageKey);
