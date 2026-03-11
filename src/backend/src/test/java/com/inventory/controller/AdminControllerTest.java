@@ -18,6 +18,7 @@ import com.inventory.repository.ItemListRepository;
 import com.inventory.repository.ItemRepository;
 import com.inventory.security.CustomUserDetails;
 import com.inventory.service.IUserService;
+import com.inventory.service.ImageStorageService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -71,6 +72,9 @@ class AdminControllerTest {
 
     @MockitoBean
     private ItemRepository itemRepository;
+
+    @MockitoBean
+    private ImageStorageService imageStorageService;
 
     private CustomUserDetails adminUser;
     private User testUser;

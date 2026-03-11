@@ -2,6 +2,7 @@ package com.inventory.dto.response;
 
 import com.inventory.dto.CustomFieldDefinition;
 import com.inventory.model.ItemList;
+import com.inventory.service.ImageStorageService;
 import org.hibernate.Hibernate;
 
 import java.time.LocalDateTime;
@@ -19,13 +20,15 @@ public record ItemListResponse(
         LocalDateTime createdAt,
         LocalDateTime updatedAt
 ) {
-    public static ItemListResponse fromEntity(ItemList itemList) {
+    public static ItemListResponse fromEntity(ItemList itemList, ImageStorageService imageStorageService) {
         int count = 0;
         List<ItemResponse> itemResponses = List.of();
 
         if (itemList.getItems() != null && Hibernate.isInitialized(itemList.getItems())) {
             count = itemList.getItems().size();
-            itemResponses = itemList.getItems().stream().map(ItemResponse::fromEntity).toList();
+            itemResponses = itemList.getItems().stream()
+                    .map(item -> ItemResponse.fromEntity(item, imageStorageService))
+                    .toList();
         }
 
         return new ItemListResponse(

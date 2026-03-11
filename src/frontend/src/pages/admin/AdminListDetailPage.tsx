@@ -14,6 +14,7 @@ import { BlurFade } from '@/components/effects/blur-fade';
 import { Breadcrumb } from '../../components/Breadcrumb';
 import { SkeletonText } from '../../components/Skeleton';
 import { cn } from '@/lib/utils';
+import { sanitizeImageUrl } from '../../utils/imageUtils';
 
 const ITEMS_PER_PAGE = 20;
 
@@ -203,7 +204,9 @@ export function AdminListDetailPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {items.map((item, index) => (
+                {items.map((item, index) => {
+                  const imageUrl = sanitizeImageUrl(item.imageUrl);
+                  return (
                   <motion.tr
                     key={item.id}
                     initial={{ opacity: 0, y: 10 }}
@@ -213,13 +216,14 @@ export function AdminListDetailPage() {
                   >
                     <TableCell className="py-5">
                       <div className="flex items-center gap-3">
-                        {item.hasImage ? (
+                        {imageUrl ? (
                           <div className="h-10 w-10 rounded-lg bg-muted overflow-hidden flex-shrink-0">
                             <img
-                              src={`/api/v1/items/${item.id}/image`}
-                              alt=""
+                              src={imageUrl}
+                              alt={item.name}
                               className="h-full w-full object-cover"
                               loading="lazy"
+                              onError={(e) => { e.currentTarget.style.display = 'none'; }}
                             />
                           </div>
                         ) : (
@@ -240,7 +244,8 @@ export function AdminListDetailPage() {
                       {new Date(item.createdAt).toLocaleDateString('fr-FR')}
                     </TableCell>
                   </motion.tr>
-                ))}
+                  );
+                })}
               </TableBody>
             </Table>
 

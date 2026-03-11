@@ -16,7 +16,6 @@ import {
   formatStatus,
   STATUS_OPTIONS,
   STATUS_LABELS,
-  getItemImageUrl,
   formatCustomFieldValue,
 } from "../types/item";
 import { SkeletonCard, SkeletonText } from "../components/Skeleton";
@@ -37,6 +36,7 @@ import {
   StaggeredItem,
 } from "@/components/effects/staggered-list";
 import { cn } from "@/lib/utils";
+import { sanitizeImageUrl } from "../utils/imageUtils";
 import { queryKeys } from "../lib/queryKeys";
 import { Breadcrumb } from "../components/Breadcrumb";
 
@@ -252,16 +252,19 @@ export default function ListDetail() {
       ) : (
         <>
           <StaggeredList className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-            {items.map((item) => (
+            {items.map((item) => {
+              const safeImageUrl = sanitizeImageUrl(item.imageUrl);
+              return (
               <StaggeredItem key={item.id}>
                 <div className="group rounded-2xl border bg-card shadow-card overflow-hidden transition-all duration-300 hover:shadow-elevated">
                   <div className="aspect-[4/3] bg-muted flex items-center justify-center overflow-hidden relative">
-                    {item.hasImage ? (
+                    {safeImageUrl ? (
                       <img
-                        src={getItemImageUrl(item.id)}
+                        src={safeImageUrl}
                         alt={item.name}
                         loading="lazy"
                         className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
                       />
                     ) : (
                       <div className="text-muted-foreground/40 flex flex-col items-center">
@@ -347,7 +350,8 @@ export default function ListDetail() {
                   </Link>
                 </div>
               </StaggeredItem>
-            ))}
+              );
+            })}
           </StaggeredList>
 
           {items.length === 0 && (

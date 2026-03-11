@@ -16,6 +16,8 @@ import com.inventory.repository.specification.ItemSpecification;
 import com.inventory.security.SecurityUtils;
 import com.inventory.service.CustomFieldValidator;
 import com.inventory.service.IItemService;
+import com.inventory.service.ImageProcessingService;
+import com.inventory.service.ImageStorageService;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.lang.NonNull;
@@ -48,13 +50,18 @@ public class ItemServiceImpl implements IItemService {
     private final ItemListRepository itemListRepository;
     private final CustomFieldValidator customFieldValidator;
     private final SecurityUtils securityUtils;
+    private final ImageStorageService imageStorageService;
+    private final ImageProcessingService imageProcessingService;
 
     public ItemServiceImpl(ItemRepository itemRepository, ItemListRepository itemListRepository,
-                           CustomFieldValidator customFieldValidator, SecurityUtils securityUtils) {
+                           CustomFieldValidator customFieldValidator, SecurityUtils securityUtils,
+                           ImageStorageService imageStorageService, ImageProcessingService imageProcessingService) {
         this.itemRepository = itemRepository;
         this.itemListRepository = itemListRepository;
         this.customFieldValidator = customFieldValidator;
         this.securityUtils = securityUtils;
+        this.imageStorageService = imageStorageService;
+        this.imageProcessingService = imageProcessingService;
     }
 
     @Override
@@ -92,14 +99,26 @@ public class ItemServiceImpl implements IItemService {
         item.setStock(request.stock() != null ? request.stock() : 0);
         item.setCustomFieldValues(request.customFieldValues());
 
+        // Save first to get the generated ID
+        Item savedItem = itemRepository.save(item);
+
         if (image != null && !image.isEmpty()) {
             byte[] imageBytes = image.getBytes();
-            String detectedType = validateAndDetectContentType(imageBytes, image.getContentType());
-            item.setImageData(imageBytes);
-            item.setContentType(detectedType);
+            validateImageContent(imageBytes, image.getContentType());
+            byte[] webpBytes = imageProcessingService.processToWebP(imageBytes);
+            validateProcessedSize(webpBytes);
+            String imageKey = "items/" + savedItem.getId() + "/" + UUID.randomUUID() + ".webp";
+            imageStorageService.upload(imageKey, webpBytes, "image/webp");
+            savedItem.setImageKey(imageKey);
+            try {
+                return itemRepository.save(savedItem);
+            } catch (Exception e) {
+                deleteImageQuietly(imageKey);
+                throw e;
+            }
         }
 
-        return itemRepository.save(item);
+        return savedItem;
     }
 
     @Override
@@ -121,9 +140,25 @@ public class ItemServiceImpl implements IItemService {
 
         if (image != null && !image.isEmpty()) {
             byte[] imageBytes = image.getBytes();
-            String detectedType = validateAndDetectContentType(imageBytes, image.getContentType());
-            item.setImageData(imageBytes);
-            item.setContentType(detectedType);
+            validateImageContent(imageBytes, image.getContentType());
+            byte[] webpBytes = imageProcessingService.processToWebP(imageBytes);
+            validateProcessedSize(webpBytes);
+            String oldImageKey = item.getImageKey();
+            String imageKey = "items/" + item.getId() + "/" + UUID.randomUUID() + ".webp";
+            imageStorageService.upload(imageKey, webpBytes, "image/webp");
+            item.setImageKey(imageKey);
+            item.setImageData(null);
+            item.setContentType(null);
+            try {
+                Item saved = itemRepository.save(item);
+                if (oldImageKey != null) {
+                    deleteImageQuietly(oldImageKey);
+                }
+                return saved;
+            } catch (Exception e) {
+                deleteImageQuietly(imageKey);
+                throw e;
+            }
         }
 
         return itemRepository.save(item);
@@ -135,7 +170,11 @@ public class ItemServiceImpl implements IItemService {
         Item item = itemRepository.findById(id)
                 .orElseThrow(() -> new ItemNotFoundException(id));
         checkItemOwnership(item);
+        String imageKey = item.getImageKey();
         itemRepository.delete(item);
+        if (imageKey != null) {
+            deleteImageQuietly(imageKey);
+        }
     }
 
     @Override
@@ -225,7 +264,21 @@ public class ItemServiceImpl implements IItemService {
         return itemList;
     }
 
-    private String validateAndDetectContentType(byte[] data, String declaredContentType) {
+    private void validateProcessedSize(byte[] data) {
+        if (data.length > MAX_FILE_SIZE) {
+            throw new FileValidationException("Processed image exceeds maximum allowed size of 10MB");
+        }
+    }
+
+    private void deleteImageQuietly(String key) {
+        try {
+            imageStorageService.delete(key);
+        } catch (Exception e) {
+            log.error("Failed to delete image from storage: {}", key, e);
+        }
+    }
+
+    private void validateImageContent(byte[] data, String declaredContentType) {
         if (data.length > MAX_FILE_SIZE) {
             throw new FileValidationException("File size exceeds maximum allowed size of 10MB");
         }
@@ -236,7 +289,6 @@ public class ItemServiceImpl implements IItemService {
         if (declaredContentType != null && !declaredContentType.equals(detectedType)) {
             log.warn("Content-Type mismatch: declared={}, detected={}", declaredContentType, detectedType);
         }
-        return detectedType;
     }
 
     private static final byte[] JPEG_MAGIC = {(byte) 0xFF, (byte) 0xD8, (byte) 0xFF};

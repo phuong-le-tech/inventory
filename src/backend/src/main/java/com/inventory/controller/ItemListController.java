@@ -5,6 +5,7 @@ import com.inventory.dto.response.ItemListResponse;
 import com.inventory.dto.response.PageResponse;
 import com.inventory.model.ItemList;
 import com.inventory.service.IItemListService;
+import com.inventory.service.ImageStorageService;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -25,9 +26,11 @@ public class ItemListController {
     private static final Set<String> ALLOWED_SORT_FIELDS = Set.of("createdAt", "updatedAt", "name", "category");
 
     private final IItemListService itemListService;
+    private final ImageStorageService imageStorageService;
 
-    public ItemListController(IItemListService itemListService) {
+    public ItemListController(IItemListService itemListService, ImageStorageService imageStorageService) {
         this.itemListService = itemListService;
+        this.imageStorageService = imageStorageService;
     }
 
     @GetMapping
@@ -55,14 +58,14 @@ public class ItemListController {
     @GetMapping("/{id}")
     public ResponseEntity<ItemListResponse> getListById(@PathVariable @NonNull UUID id) {
         ItemList itemList = itemListService.getListById(id);
-        return ResponseEntity.ok(ItemListResponse.fromEntity(itemList));
+        return ResponseEntity.ok(ItemListResponse.fromEntity(itemList, imageStorageService));
     }
 
     @PostMapping
     public ResponseEntity<ItemListResponse> createList(@Valid @RequestBody @NonNull ItemListRequest request) {
         ItemList itemList = itemListService.createList(request);
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ItemListResponse.fromEntity(itemList));
+                .body(ItemListResponse.fromEntity(itemList, imageStorageService));
     }
 
     @PatchMapping("/{id}")
@@ -71,7 +74,7 @@ public class ItemListController {
             @Valid @RequestBody @NonNull ItemListRequest request
     ) {
         ItemList itemList = itemListService.updateList(id, request);
-        return ResponseEntity.ok(ItemListResponse.fromEntity(itemList));
+        return ResponseEntity.ok(ItemListResponse.fromEntity(itemList, imageStorageService));
     }
 
     @DeleteMapping("/{id}")

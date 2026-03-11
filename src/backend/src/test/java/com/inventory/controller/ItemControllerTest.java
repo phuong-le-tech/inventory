@@ -12,6 +12,7 @@ import com.inventory.model.ItemList;
 import com.inventory.security.ApiRateLimiter;
 import com.inventory.security.CustomUserDetails;
 import com.inventory.service.IItemService;
+import com.inventory.service.ImageStorageService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -63,6 +64,9 @@ class ItemControllerTest {
     @MockitoBean
     @Qualifier("uploadRateLimiter")
     private ApiRateLimiter uploadRateLimiter;
+
+    @MockitoBean
+    private ImageStorageService imageStorageService;
 
     private Item testItem;
     private ItemList testList;
@@ -197,57 +201,6 @@ class ItemControllerTest {
                     .thenReturn(Optional.empty());
 
             mockMvc.perform(get("/api/v1/items/{id}", nonExistingId)
-                            .with(user(new CustomUserDetails(UUID.randomUUID(), "test@test.com", "USER"))))
-                    .andExpect(status().isNotFound());
-        }
-    }
-
-    @Nested
-    @DisplayName("GET /api/v1/items/{id}/image")
-    class GetItemImageTests {
-
-        @Test
-        @DisplayName("should return image when item has image data")
-        void getItemImage_withImage_returnsImageBytes() throws Exception {
-            byte[] imageBytes = new byte[]{(byte) 0xFF, (byte) 0xD8, (byte) 0xFF, (byte) 0xE0};
-            testItem.setImageData(imageBytes);
-            testItem.setContentType("image/jpeg");
-            when(itemService.getItemById(testId)).thenReturn(Optional.of(testItem));
-
-            mockMvc.perform(get("/api/v1/items/{id}/image", testId)
-                            .with(user(new CustomUserDetails(UUID.randomUUID(), "test@test.com", "USER"))))
-                    .andExpect(status().isOk())
-                    .andExpect(content().contentType(MediaType.IMAGE_JPEG));
-        }
-
-        @Test
-        @DisplayName("should return 404 when item has no image data")
-        void getItemImage_noImage_returns404() throws Exception {
-            testItem.setImageData(null);
-            when(itemService.getItemById(testId)).thenReturn(Optional.of(testItem));
-
-            mockMvc.perform(get("/api/v1/items/{id}/image", testId)
-                            .with(user(new CustomUserDetails(UUID.randomUUID(), "test@test.com", "USER"))))
-                    .andExpect(status().isNotFound());
-        }
-
-        @Test
-        @DisplayName("should return 404 when item has empty image data")
-        void getItemImage_emptyImage_returns404() throws Exception {
-            testItem.setImageData(new byte[0]);
-            when(itemService.getItemById(testId)).thenReturn(Optional.of(testItem));
-
-            mockMvc.perform(get("/api/v1/items/{id}/image", testId)
-                            .with(user(new CustomUserDetails(UUID.randomUUID(), "test@test.com", "USER"))))
-                    .andExpect(status().isNotFound());
-        }
-
-        @Test
-        @DisplayName("should return 404 when item not found")
-        void getItemImage_notFound_returns404() throws Exception {
-            when(itemService.getItemById(testId)).thenReturn(Optional.empty());
-
-            mockMvc.perform(get("/api/v1/items/{id}/image", testId)
                             .with(user(new CustomUserDetails(UUID.randomUUID(), "test@test.com", "USER"))))
                     .andExpect(status().isNotFound());
         }

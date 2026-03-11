@@ -1,6 +1,7 @@
 package com.inventory.dto.response;
 
 import com.inventory.model.Item;
+import com.inventory.service.ImageStorageService;
 
 import java.time.LocalDateTime;
 import java.util.Map;
@@ -11,7 +12,7 @@ public record AdminItemResponse(
         String name,
         String status,
         Integer stock,
-        boolean hasImage,
+        String imageUrl,
         UUID listId,
         String listName,
         UUID ownerId,
@@ -20,13 +21,17 @@ public record AdminItemResponse(
         LocalDateTime createdAt,
         LocalDateTime updatedAt
 ) {
-    public static AdminItemResponse fromEntity(Item item) {
+    public static AdminItemResponse fromEntity(Item item, ImageStorageService imageStorageService) {
         return new AdminItemResponse(
                 item.getId(),
                 item.getName(),
                 item.getStatus() != null ? item.getStatus().name() : null,
                 item.getStock(),
-                item.getImageData() != null && item.getImageData().length > 0,
+                item.getImageKey() != null
+                        ? imageStorageService.getPresignedUrl(item.getImageKey())
+                        : (item.getImageData() != null
+                                ? "/api/v1/items/" + item.getId() + "/image"
+                                : null),
                 item.getItemList() != null ? item.getItemList().getId() : null,
                 item.getItemList() != null ? item.getItemList().getName() : null,
                 item.getItemList() != null ? item.getItemList().getUser().getId() : null,

@@ -5,6 +5,8 @@ import com.inventory.exception.AccountNotVerifiedException;
 import com.inventory.exception.CustomFieldValidationException;
 import jakarta.validation.ConstraintViolationException;
 import com.inventory.exception.FileValidationException;
+import com.inventory.exception.ImageProcessingException;
+import com.inventory.exception.ImageStorageException;
 import com.inventory.exception.ItemListNotFoundException;
 import com.inventory.exception.ItemNotFoundException;
 import com.inventory.exception.ListLimitExceededException;
@@ -119,6 +121,18 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(RateLimitExceededException.class)
     public ResponseEntity<ApiErrorResponse> handleRateLimit(RateLimitExceededException e) {
         return buildErrorResponse(HttpStatus.TOO_MANY_REQUESTS, e.getMessage());
+    }
+
+    @ExceptionHandler(ImageProcessingException.class)
+    public ResponseEntity<ApiErrorResponse> handleImageProcessing(ImageProcessingException e) {
+        log.error("Image processing failed", e);
+        return buildErrorResponse(HttpStatus.UNPROCESSABLE_ENTITY, "Image processing failed");
+    }
+
+    @ExceptionHandler(ImageStorageException.class)
+    public ResponseEntity<ApiErrorResponse> handleImageStorage(ImageStorageException e) {
+        log.error("Image storage operation failed", e);
+        return buildErrorResponse(HttpStatus.BAD_GATEWAY, "Image storage service unavailable");
     }
 
     @ExceptionHandler(IllegalStateException.class)
