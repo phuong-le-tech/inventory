@@ -479,6 +479,30 @@ class ItemServiceImplTest {
         }
 
         @Test
+        @DisplayName("should clear legacy imageData and contentType when uploading new image")
+        void updateItem_withImage_clearsLegacyImageData() throws IOException {
+            testItem.setImageData(new byte[]{1, 2, 3});
+            testItem.setContentType("image/jpeg");
+
+            ItemRequest request = new ItemRequest("Updated", testListId, ItemStatus.AVAILABLE, 5, null);
+            byte[] pngBytes = new byte[]{(byte) 0x89, 0x50, 0x4E, 0x47, 0, 0, 0, 0, 0, 0, 0, 0};
+            MockMultipartFile image = new MockMultipartFile("image", "test.png", "image/png", pngBytes);
+
+            when(securityUtils.isAdmin()).thenReturn(true);
+            when(itemRepository.findById(testId)).thenReturn(Optional.of(testItem));
+            when(itemListRepository.findById(testListId)).thenReturn(Optional.of(testList));
+            when(itemRepository.save(any(Item.class))).thenAnswer(invocation -> invocation.getArgument(0));
+            when(imageProcessingService.processToWebP(any())).thenReturn(new byte[]{1, 2, 3});
+            when(imageStorageService.upload(anyString(), any(byte[].class), anyString())).thenReturn("items/test-key.webp");
+
+            Item result = itemService.updateItem(testId, request, image);
+
+            assertThat(result.getImageData()).isNull();
+            assertThat(result.getContentType()).isNull();
+            assertThat(result.getImageKey()).isNotNull();
+        }
+
+        @Test
         @DisplayName("should throw when item not found")
         void updateItem_notFound_throwsException() {
             UUID nonExistingId = UUID.randomUUID();

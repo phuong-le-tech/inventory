@@ -147,6 +147,8 @@ public class ItemServiceImpl implements IItemService {
             String imageKey = "items/" + item.getId() + "/" + UUID.randomUUID() + ".webp";
             imageStorageService.upload(imageKey, webpBytes, "image/webp");
             item.setImageKey(imageKey);
+            item.setImageData(null);
+            item.setContentType(null);
             try {
                 Item saved = itemRepository.save(item);
                 if (oldImageKey != null) {
