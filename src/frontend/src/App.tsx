@@ -34,6 +34,7 @@ const AdminDashboardPage = lazy(() =>
     default: m.AdminDashboardPage,
   })),
 );
+const SettingsPage = lazy(() => import("./pages/SettingsPage"));
 const UpgradePage = lazy(() => import("./pages/UpgradePage"));
 const PaymentSuccess = lazy(() => import("./pages/PaymentSuccess"));
 const PaymentCancel = lazy(() => import("./pages/PaymentCancel"));
@@ -147,6 +148,16 @@ export default function App() {
             <ProtectedRoute>
               <Layout>
                 <ItemForm />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/settings"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <SettingsPage />
               </Layout>
             </ProtectedRoute>
           }

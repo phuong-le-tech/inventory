@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, List, Package, Menu, X, Shield, Layers, BarChart3 } from 'lucide-react';
+import { LayoutDashboard, List, Package, Menu, X, Shield, Layers, BarChart3, Settings } from 'lucide-react';
 import FocusTrap from 'focus-trap-react';
 import { UserMenu } from './UserMenu';
 import { CookieConsent } from './CookieConsent';
@@ -32,6 +32,7 @@ export default function Layout({ children }: LayoutProps) {
   const navItems = [
     { to: '/dashboard', label: 'Tableau de bord', icon: LayoutDashboard },
     { to: '/lists', label: 'Mes Listes', icon: List },
+    { to: '/settings', label: 'Paramètres', icon: Settings },
     ...(isAdmin ? [
       { to: '/admin/stats', label: 'Statistiques', icon: BarChart3 },
       { to: '/admin/users', label: 'Utilisateurs', icon: Shield },
