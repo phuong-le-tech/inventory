@@ -109,6 +109,6 @@ export const FEATURES: Feature[] = [
     icon: Users,
     title: "Multi-utilisateurs",
     description:
-      "Comptes sécurisés avec roles Utilisateur et Administrateur",
+      "Comptes sécurisés avec rôles Utilisateur et Administrateur",
   },
 ];
