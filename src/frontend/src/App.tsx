@@ -44,6 +44,11 @@ const PrivacyPolicy = lazy(() =>
 const TermsOfService = lazy(() =>
   import("./pages/TermsOfService").then((m) => ({ default: m.TermsOfService })),
 );
+const MentionsLegales = lazy(() =>
+  import("./pages/MentionsLegales").then((m) => ({
+    default: m.MentionsLegales,
+  })),
+);
 const VerifyEmail = lazy(() =>
   import("./pages/VerifyEmail").then((m) => ({ default: m.VerifyEmail })),
 );
@@ -70,6 +75,7 @@ export default function App() {
         <Route path="/signup" element={<SignupPage />} />
         <Route path="/privacy" element={<PrivacyPolicy />} />
         <Route path="/terms" element={<TermsOfService />} />
+        <Route path="/mentions-legales" element={<MentionsLegales />} />
         <Route path="/verify-email" element={<VerifyEmail />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />

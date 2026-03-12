@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { LayoutDashboard, List, Package, Menu, X, Shield, Layers, BarChart3 } from 'lucide-react';
 import FocusTrap from 'focus-trap-react';
 import { UserMenu } from './UserMenu';
+import { CookieConsent } from './CookieConsent';
 import { useAuth } from '../contexts/AuthContext';
 import { cn } from '@/lib/utils';
 
@@ -131,9 +132,19 @@ export default function Layout({ children }: LayoutProps) {
         </aside>
       </FocusTrap>
 
-      <main className="flex-1 p-4 md:p-8 lg:p-12">
-        {children}
-      </main>
+      <div className="flex-1 flex flex-col">
+        <main className="flex-1 p-4 md:p-8 lg:p-12">
+          {children}
+        </main>
+        <footer className="border-t px-4 py-4 md:px-8">
+          <nav aria-label="Liens légaux" className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+            <Link to="/mentions-legales" className="hover:text-foreground transition-colors">Mentions légales</Link>
+            <Link to="/privacy" className="hover:text-foreground transition-colors">Politique de confidentialité</Link>
+            <Link to="/terms" className="hover:text-foreground transition-colors">Conditions d'utilisation</Link>
+          </nav>
+        </footer>
+      </div>
+      <CookieConsent />
     </div>
   );
 }
