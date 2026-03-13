@@ -1,6 +1,5 @@
 #!/bin/sh
-set -e
-
+# No set -e: we handle errors explicitly to avoid silent exits
 # Redirect all output to stdout so Railway captures everything
 exec 2>&1
 
@@ -37,8 +36,8 @@ echo "Waiting for backend to start (PID: $BACKEND_PID)..."
 READY=false
 for i in $(seq 1 60); do
   if ! kill -0 "$BACKEND_PID" 2>/dev/null; then
-    wait "$BACKEND_PID" 2>/dev/null
-    EXIT_CODE=$?
+    EXIT_CODE=0
+    wait "$BACKEND_PID" || EXIT_CODE=$?
     echo "Backend process exited unexpectedly with code $EXIT_CODE"
     exit 1
   fi
