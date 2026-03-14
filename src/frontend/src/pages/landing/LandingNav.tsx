@@ -6,12 +6,12 @@ export function LandingNav() {
   return (
     <nav aria-label="Navigation principale" className="sticky top-0 z-50 bg-background/95 backdrop-blur-sm border-b">
       <div className="max-w-6xl mx-auto px-6 flex items-center justify-between h-16">
-        <Link to="/" className="flex items-center gap-3" aria-label="Inventory - Accueil">
+        <Link to="/" className="flex items-center gap-3" aria-label="Shelfio - Accueil">
           <div className="w-9 h-9 bg-brand/10 rounded-xl flex items-center justify-center">
             <Package className="h-[18px] w-[18px] text-brand" aria-hidden="true" />
           </div>
           <span className="font-display text-xl font-semibold tracking-tight">
-            Inventory
+            Shelfio
           </span>
         </Link>
         <div className="flex items-center gap-3">
@@ -32,7 +32,7 @@ export function LandingFooter() {
     <footer className="border-t py-8" role="contentinfo">
       <div className="max-w-6xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
         <p className="text-sm text-muted-foreground">
-          &copy; {new Date().getFullYear()} Inventory. Tous droits réservés.
+          &copy; {new Date().getFullYear()} Shelfio. Tous droits réservés.
         </p>
         <nav aria-label="Liens légaux" className="flex items-center gap-6">
           <Link

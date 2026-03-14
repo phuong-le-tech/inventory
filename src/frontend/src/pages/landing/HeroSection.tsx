@@ -86,7 +86,7 @@ export function HeroSection() {
         <div className="text-center">
           <BlurFade delay={0.1} duration={0.6}>
             <p className="text-sm font-medium text-brand tracking-widest uppercase mb-6">
-              Gestion d'inventaire simplifiée
+              Gestion d'inventaire, simplifiée
             </p>
           </BlurFade>
           <BlurFade delay={0.2} duration={0.6}>

@@ -51,7 +51,7 @@ export default function Layout({ children }: LayoutProps) {
           <Menu className="h-5 w-5" />
         </button>
         <Package className="h-5 w-5 text-foreground" />
-        <span className="font-display text-lg font-semibold tracking-tight">Inventory</span>
+        <span className="font-display text-lg font-semibold tracking-tight">Shelfio</span>
       </div>
 
       {/* Backdrop overlay (mobile) */}
@@ -83,10 +83,10 @@ export default function Layout({ children }: LayoutProps) {
           <div className="p-6 border-b">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-brand/10 rounded-xl flex items-center justify-center" aria-label="Logo Inventory">
+                <div className="w-10 h-10 bg-brand/10 rounded-xl flex items-center justify-center" aria-label="Logo Shelfio">
                   <Package className="h-5 w-5 text-brand" aria-hidden="true" />
                 </div>
-                <span className="font-display text-xl font-semibold tracking-tight">Inventory</span>
+                <span className="font-display text-xl font-semibold tracking-tight">Shelfio</span>
               </div>
               <button
                 onClick={() => setSidebarOpen(false)}

@@ -1,4 +1,4 @@
-# Inventory Management Application
+# Shelfio
 
 A full-stack inventory management application that lets users organize items into custom lists, track their status, and manage inventory through a modern dashboard. Built with a Spring Boot REST API and a React single-page application, containerized with Docker for easy deployment.
 

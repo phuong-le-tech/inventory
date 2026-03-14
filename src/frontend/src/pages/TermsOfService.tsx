@@ -38,7 +38,7 @@ export function TermsOfService() {
               <h2 className="text-lg font-semibold text-foreground mb-2">
                 1. Identification du professionnel
               </h2>
-              <p>Le service Inventory est édité par :</p>
+              <p>Le service Shelfio est édité par :</p>
               <ul className="list-none pl-0 space-y-1 mt-2">
                 <li>
                   <strong>Nom :</strong> Phuong LE{" "}
@@ -59,7 +59,7 @@ export function TermsOfService() {
                 2. Objet et description du service
               </h2>
               <p>
-                Inventory est un service en ligne de gestion d'inventaire
+                Shelfio est un service en ligne de gestion d'inventaire
                 permettant aux utilisateurs de créer des listes, d'y ajouter des
                 articles avec des champs personnalisés, et de suivre leur stock
                 et leur état.
