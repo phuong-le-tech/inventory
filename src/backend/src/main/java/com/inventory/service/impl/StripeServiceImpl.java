@@ -244,7 +244,7 @@ public class StripeServiceImpl implements IStripeService {
             String html = """
                 <h2>Confirmation de votre achat Premium</h2>
                 <p>Bonjour,</p>
-                <p>Nous confirmons votre achat sur <strong>Inventory App</strong>.</p>
+                <p>Nous confirmons votre achat sur <strong>Shelfio</strong>.</p>
                 <table style="border-collapse:collapse;margin:16px 0;">
                   <tr><td style="padding:4px 12px 4px 0;font-weight:bold;">Produit</td><td>Premium — création de listes illimitée</td></tr>
                   <tr><td style="padding:4px 12px 4px 0;font-weight:bold;">Montant</td><td>%s %s TTC (paiement unique)</td></tr>
@@ -255,11 +255,11 @@ public class StripeServiceImpl implements IStripeService {
                 à l'exécution immédiate du service numérique et renoncé à votre droit de rétractation de 14 jours.</p>
                 <p>Pour toute question, contactez-nous à : <a href="mailto:phuongle.tech@gmail.com">phuongle.tech@gmail.com</a></p>
                 <p style="margin-top:24px;font-size:12px;color:#666;">
-                  Inventory App — Phuong LE
+                  Shelfio — Phuong LE
                 </p>
                 """.formatted(formattedAmount, priceCurrency.toUpperCase(), date);
 
-            emailSender.send(user.getEmail(), "Confirmation de votre achat Premium — Inventory App", html);
+            emailSender.send(user.getEmail(), "Confirmation de votre achat Premium — Shelfio", html);
             log.info("Purchase confirmation email sent to user {}", user.getId());
         } catch (Exception e) {
             log.error("Failed to send purchase confirmation email to user {}: {}", user.getId(), e.getMessage());

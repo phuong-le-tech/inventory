@@ -185,7 +185,7 @@ public class UserServiceImpl implements IUserService {
             </body></html>
             """.formatted(resetUrl, PASSWORD_RESET_TOKEN_EXPIRY_MINUTES);
 
-        emailSender.send(email, "Reinitialisation du mot de passe - Inventory", html);
+        emailSender.send(email, "Reinitialisation du mot de passe - Shelfio", html);
     }
 
     @Override

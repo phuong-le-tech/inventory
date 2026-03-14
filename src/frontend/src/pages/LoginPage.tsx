@@ -64,9 +64,9 @@ export function LoginPage() {
           <h1
             className="font-display text-[8rem] xl:text-[10rem] font-bold text-foreground/[0.04] select-none leading-none -rotate-3"
           >
-            Inven
+            Shelf
             <br />
-            tory
+            io
           </h1>
         </BlurFade>
       </div>
@@ -88,7 +88,7 @@ export function LoginPage() {
               </div>
             </BlurFade>
             <BlurFade delay={0.3}>
-              <h1 className="font-display text-4xl font-semibold tracking-tight mb-2">Inventory</h1>
+              <h1 className="font-display text-4xl font-semibold tracking-tight mb-2">Shelfio</h1>
             </BlurFade>
             <BlurFade delay={0.4}>
               <p className="text-muted-foreground">Connectez-vous pour gérer votre inventaire</p>
@@ -205,7 +205,7 @@ export function LoginPage() {
           </div>
 
           <p className="mt-6 text-center text-muted-foreground text-sm">
-            Nouveau sur Inventory ?{' '}
+            Nouveau sur Shelfio ?{' '}
             <Link to="/signup" className="text-foreground font-medium hover:underline">
               Créer un compte
             </Link>

@@ -228,7 +228,7 @@ public class AuthServiceImpl implements IAuthService {
             <html><head><meta charset="UTF-8"></head><body>
             <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
                 <h2>Verifiez votre adresse email</h2>
-                <p>Merci de vous etre inscrit sur Inventory. Cliquez sur le lien ci-dessous pour verifier votre compte :</p>
+                <p>Merci de vous etre inscrit sur Shelfio. Cliquez sur le lien ci-dessous pour verifier votre compte :</p>
                 <p><a href="%s" style="display: inline-block; padding: 12px 24px; background-color: #171717; color: #ffffff; text-decoration: none; border-radius: 8px;">Verifier mon email</a></p>
                 <p style="color: #666; font-size: 14px;">Ce lien expire dans %d heures.</p>
                 <p style="color: #666; font-size: 14px;">Si vous n'avez pas cree de compte, vous pouvez ignorer cet email.</p>
@@ -236,7 +236,7 @@ public class AuthServiceImpl implements IAuthService {
             </body></html>
             """.formatted(verifyUrl, VERIFICATION_TOKEN_EXPIRY_HOURS);
 
-        emailSender.send(user.getEmail(), "Verifiez votre adresse email - Inventory", html);
+        emailSender.send(user.getEmail(), "Verifiez votre adresse email - Shelfio", html);
     }
 
     private void sendPasswordResetEmail(User user) {
@@ -263,7 +263,7 @@ public class AuthServiceImpl implements IAuthService {
             </body></html>
             """.formatted(resetUrl, PASSWORD_RESET_TOKEN_EXPIRY_MINUTES);
 
-        emailSender.send(user.getEmail(), "Reinitialisation du mot de passe - Inventory", html);
+        emailSender.send(user.getEmail(), "Reinitialisation du mot de passe - Shelfio", html);
     }
 
     private String generateSecureToken() {

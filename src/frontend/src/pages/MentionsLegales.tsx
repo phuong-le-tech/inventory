@@ -37,7 +37,7 @@ export function MentionsLegales() {
               <h2 className="text-lg font-semibold text-foreground mb-2">
                 Éditeur du site
               </h2>
-              <p>Le site Inventory est édité par une personne physique :</p>
+              <p>Le site Shelfio est édité par une personne physique :</p>
               <ul className="list-none pl-0 space-y-1 mt-2">
                 <li>
                   <strong>Nom :</strong> Phuong LE
