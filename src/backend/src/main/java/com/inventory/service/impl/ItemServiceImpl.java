@@ -84,6 +84,14 @@ public class ItemServiceImpl implements IItemService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public Optional<Item> getItemByBarcode(@NonNull String barcode) {
+        UUID userId = securityUtils.getCurrentUserId()
+                .orElseThrow(() -> new UnauthorizedException("Not authenticated"));
+        return itemRepository.findByBarcodeAndItemList_User_Id(barcode, userId);
+    }
+
+    @Override
     @Transactional
     public Item createItem(@NonNull ItemRequest request, MultipartFile image) throws IOException {
 
@@ -97,6 +105,7 @@ public class ItemServiceImpl implements IItemService {
         item.setItemList(itemList);
         item.setStatus(request.status() != null ? request.status() : ItemStatus.AVAILABLE);
         item.setStock(request.stock() != null ? request.stock() : 0);
+        item.setBarcode(request.barcode());
         item.setCustomFieldValues(request.customFieldValues());
 
         // Save first to get the generated ID
@@ -136,6 +145,7 @@ public class ItemServiceImpl implements IItemService {
         item.setItemList(itemList);
         item.setStatus(request.status() != null ? request.status() : item.getStatus());
         item.setStock(request.stock() != null ? request.stock() : item.getStock());
+        item.setBarcode(request.barcode());
         item.setCustomFieldValues(request.customFieldValues());
 
         if (image != null && !image.isEmpty()) {

@@ -4,6 +4,7 @@ import {
   formatStatus,
   STATUS_LABELS,
 } from "../types/item";
+import { createItemSchema } from "../schemas/item.schemas";
 
 describe("formatCustomFieldValue", () => {
   it('formats BOOLEAN true as "Oui"', () => {
@@ -45,6 +46,42 @@ describe("formatStatus", () => {
       expect(formatStatus(status as Parameters<typeof formatStatus>[0])).toBe(
         label,
       );
+    }
+  });
+});
+
+describe("createItemSchema barcode validation", () => {
+  const schema = createItemSchema([]);
+  const validBase = {
+    name: "Test Item",
+    itemListId: "some-uuid",
+    status: "AVAILABLE" as const,
+    stock: 0,
+  };
+
+  it("accepts a valid barcode", () => {
+    const result = schema.safeParse({ ...validBase, barcode: "1234567890" });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts an empty barcode", () => {
+    const result = schema.safeParse({ ...validBase, barcode: "" });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts a missing barcode (undefined)", () => {
+    const result = schema.safeParse(validBase);
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects a barcode exceeding max length", () => {
+    const result = schema.safeParse({
+      ...validBase,
+      barcode: "x".repeat(256),
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues[0].path).toContain("barcode");
     }
   });
 });

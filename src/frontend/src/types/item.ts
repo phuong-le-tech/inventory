@@ -74,6 +74,7 @@ export interface Item {
   itemListId: string;
   status: ItemStatus;
   stock: number;
+  barcode?: string | null;
   imageUrl?: string | null;
   customFieldValues?: Record<string, unknown>;
   createdAt: string;
@@ -85,6 +86,7 @@ export interface ItemFormData {
   itemListId: string;
   status: ItemStatus;
   stock: number;
+  barcode?: string;
   customFieldValues?: Record<string, unknown>;
 }
 
@@ -142,6 +144,7 @@ export interface AdminItem {
   name: string;
   status: ItemStatus;
   stock: number;
+  barcode?: string | null;
   imageUrl?: string | null;
   listId: string;
   listName: string;

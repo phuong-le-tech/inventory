@@ -108,7 +108,7 @@ class ItemServiceImplTest {
         @DisplayName("should return page of items")
         void getAllItems_returnsPageOfItems() {
             Pageable pageable = PageRequest.of(0, 10);
-            ItemSearchCriteria criteria = new ItemSearchCriteria(null, null, null);
+            ItemSearchCriteria criteria = new ItemSearchCriteria(null, null, null, null);
             Page<Item> expectedPage = new PageImpl<>(Objects.requireNonNull(List.of(testItem), "List of items not found"));
 
             when(securityUtils.isAdmin()).thenReturn(false);
@@ -126,7 +126,7 @@ class ItemServiceImplTest {
         @DisplayName("should return all items for admin without user filter")
         void getAllItems_admin_returnsAllItems() {
             Pageable pageable = PageRequest.of(0, 10);
-            ItemSearchCriteria criteria = new ItemSearchCriteria(null, null, null);
+            ItemSearchCriteria criteria = new ItemSearchCriteria(null, null, null, null);
             Page<Item> expectedPage = new PageImpl<>(List.of(testItem));
 
             when(securityUtils.isAdmin()).thenReturn(true);
@@ -142,7 +142,7 @@ class ItemServiceImplTest {
         @DisplayName("should throw UnauthorizedException when user not authenticated")
         void getAllItems_notAuthenticated_throwsException() {
             Pageable pageable = PageRequest.of(0, 10);
-            ItemSearchCriteria criteria = new ItemSearchCriteria(null, null, null);
+            ItemSearchCriteria criteria = new ItemSearchCriteria(null, null, null, null);
 
             when(securityUtils.isAdmin()).thenReturn(false);
             when(securityUtils.getCurrentUserId()).thenReturn(Optional.empty());
@@ -218,13 +218,56 @@ class ItemServiceImplTest {
     }
 
     @Nested
+    @DisplayName("getItemByBarcode")
+    class GetItemByBarcodeTests {
+
+        @Test
+        @DisplayName("should return item when barcode matches for current user")
+        void getItemByBarcode_found_returnsItem() {
+            String barcode = "1234567890";
+            testItem.setBarcode(barcode);
+            when(securityUtils.getCurrentUserId()).thenReturn(Optional.of(testUserId));
+            when(itemRepository.findByBarcodeAndItemList_User_Id(barcode, testUserId))
+                    .thenReturn(Optional.of(testItem));
+
+            Optional<Item> result = itemService.getItemByBarcode(barcode);
+
+            assertThat(result).isPresent();
+            assertThat(result.get().getBarcode()).isEqualTo(barcode);
+            verify(itemRepository).findByBarcodeAndItemList_User_Id(barcode, testUserId);
+        }
+
+        @Test
+        @DisplayName("should return empty when barcode not found")
+        void getItemByBarcode_notFound_returnsEmpty() {
+            String barcode = "NONEXISTENT";
+            when(securityUtils.getCurrentUserId()).thenReturn(Optional.of(testUserId));
+            when(itemRepository.findByBarcodeAndItemList_User_Id(barcode, testUserId))
+                    .thenReturn(Optional.empty());
+
+            Optional<Item> result = itemService.getItemByBarcode(barcode);
+
+            assertThat(result).isEmpty();
+        }
+
+        @Test
+        @DisplayName("should throw UnauthorizedException when not authenticated")
+        void getItemByBarcode_notAuthenticated_throwsException() {
+            when(securityUtils.getCurrentUserId()).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> itemService.getItemByBarcode("1234567890"))
+                    .isInstanceOf(UnauthorizedException.class);
+        }
+    }
+
+    @Nested
     @DisplayName("createItem")
     class CreateItemTests {
 
         @Test
         @DisplayName("should create item with valid request")
         void createItem_validRequest_createsItem() throws IOException {
-            ItemRequest request = new ItemRequest("New Item", testListId, ItemStatus.AVAILABLE, 5, null);
+            ItemRequest request = new ItemRequest("New Item", testListId, ItemStatus.AVAILABLE, 5, null, null);
             when(securityUtils.isAdmin()).thenReturn(true);
             when(itemListRepository.findById(testListId)).thenReturn(Optional.of(testList));
             when(itemRepository.save(any(Item.class))).thenAnswer(invocation -> {
@@ -245,7 +288,7 @@ class ItemServiceImplTest {
         @Test
         @DisplayName("should create item with default status when not provided")
         void createItem_noStatus_usesDefaultStatus() throws IOException {
-            ItemRequest request = new ItemRequest("New Item", testListId, null, null, null);
+            ItemRequest request = new ItemRequest("New Item", testListId, null, null, null, null);
             when(securityUtils.isAdmin()).thenReturn(true);
             when(itemListRepository.findById(testListId)).thenReturn(Optional.of(testList));
             when(itemRepository.save(any(Item.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -260,7 +303,7 @@ class ItemServiceImplTest {
         @DisplayName("should throw exception when list not found")
         void createItem_listNotFound_throwsException() {
             UUID nonExistingListId = UUID.randomUUID();
-            ItemRequest request = new ItemRequest("New Item", nonExistingListId, ItemStatus.AVAILABLE, 5, null);
+            ItemRequest request = new ItemRequest("New Item", nonExistingListId, ItemStatus.AVAILABLE, 5, null, null);
             when(itemListRepository.findById(nonExistingListId)).thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> itemService.createItem(request, null))
@@ -270,7 +313,7 @@ class ItemServiceImplTest {
         @Test
         @DisplayName("should upload image to S3 when provided")
         void createItem_withImage_uploadsToS3() throws IOException {
-            ItemRequest request = new ItemRequest("New Item", testListId, ItemStatus.DAMAGED, 10, null);
+            ItemRequest request = new ItemRequest("New Item", testListId, ItemStatus.DAMAGED, 10, null, null);
             // JPEG magic bytes (FF D8 FF) followed by dummy data
             byte[] jpegBytes = new byte[]{(byte) 0xFF, (byte) 0xD8, (byte) 0xFF, (byte) 0xE0, 0, 0, 0, 0, 0, 0, 0, 0};
             MockMultipartFile image = new MockMultipartFile(
@@ -292,7 +335,7 @@ class ItemServiceImplTest {
         @Test
         @DisplayName("should create item with PNG image")
         void createItem_withPngImage_uploadsToS3() throws IOException {
-            ItemRequest request = new ItemRequest("PNG Item", testListId, ItemStatus.AVAILABLE, 1, null);
+            ItemRequest request = new ItemRequest("PNG Item", testListId, ItemStatus.AVAILABLE, 1, null, null);
             byte[] pngBytes = new byte[]{(byte) 0x89, 0x50, 0x4E, 0x47, 0, 0, 0, 0, 0, 0, 0, 0};
             MockMultipartFile image = new MockMultipartFile("image", "test.png", "image/png", pngBytes);
 
@@ -310,7 +353,7 @@ class ItemServiceImplTest {
         @Test
         @DisplayName("should create item with GIF image")
         void createItem_withGifImage_uploadsToS3() throws IOException {
-            ItemRequest request = new ItemRequest("GIF Item", testListId, ItemStatus.AVAILABLE, 1, null);
+            ItemRequest request = new ItemRequest("GIF Item", testListId, ItemStatus.AVAILABLE, 1, null, null);
             byte[] gifBytes = new byte[]{0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 0, 0, 0, 0, 0, 0};
             MockMultipartFile image = new MockMultipartFile("image", "test.gif", "image/gif", gifBytes);
 
@@ -328,7 +371,7 @@ class ItemServiceImplTest {
         @Test
         @DisplayName("should create item with WebP image")
         void createItem_withWebpImage_uploadsToS3() throws IOException {
-            ItemRequest request = new ItemRequest("WebP Item", testListId, ItemStatus.AVAILABLE, 1, null);
+            ItemRequest request = new ItemRequest("WebP Item", testListId, ItemStatus.AVAILABLE, 1, null, null);
             // RIFF....WEBP
             byte[] webpBytes = new byte[]{0x52, 0x49, 0x46, 0x46, 0, 0, 0, 0, 0x57, 0x45, 0x42, 0x50};
             MockMultipartFile image = new MockMultipartFile("image", "test.webp", "image/webp", webpBytes);
@@ -347,7 +390,7 @@ class ItemServiceImplTest {
         @Test
         @DisplayName("should throw exception for file too large")
         void createItem_fileTooLarge_throwsException() {
-            ItemRequest request = new ItemRequest("Item", testListId, ItemStatus.AVAILABLE, 1, null);
+            ItemRequest request = new ItemRequest("Item", testListId, ItemStatus.AVAILABLE, 1, null, null);
             byte[] largeFile = new byte[10 * 1024 * 1024 + 1]; // just over 10MB
             largeFile[0] = (byte) 0xFF;
             largeFile[1] = (byte) 0xD8;
@@ -365,7 +408,7 @@ class ItemServiceImplTest {
         @Test
         @DisplayName("should throw exception for invalid file type")
         void createItem_invalidFileType_throwsException() {
-            ItemRequest request = new ItemRequest("Item", testListId, ItemStatus.AVAILABLE, 1, null);
+            ItemRequest request = new ItemRequest("Item", testListId, ItemStatus.AVAILABLE, 1, null, null);
             byte[] invalidBytes = new byte[]{0x25, 0x50, 0x44, 0x46, 0, 0, 0, 0, 0, 0, 0, 0}; // PDF magic
             MockMultipartFile image = new MockMultipartFile("image", "test.pdf", "application/pdf", invalidBytes);
 
@@ -380,7 +423,7 @@ class ItemServiceImplTest {
         @Test
         @DisplayName("should throw exception for file too small to detect type")
         void createItem_fileTooSmall_throwsException() {
-            ItemRequest request = new ItemRequest("Item", testListId, ItemStatus.AVAILABLE, 1, null);
+            ItemRequest request = new ItemRequest("Item", testListId, ItemStatus.AVAILABLE, 1, null, null);
             byte[] tinyBytes = new byte[]{0x01, 0x02};
             MockMultipartFile image = new MockMultipartFile("image", "tiny.bin", "application/octet-stream", tinyBytes);
 
@@ -396,7 +439,7 @@ class ItemServiceImplTest {
         @DisplayName("should throw when non-owner creates item in another user's list")
         void createItem_nonOwner_throwsException() {
             UUID otherUserId = UUID.randomUUID();
-            ItemRequest request = new ItemRequest("New Item", testListId, ItemStatus.AVAILABLE, 5, null);
+            ItemRequest request = new ItemRequest("New Item", testListId, ItemStatus.AVAILABLE, 5, null, null);
 
             when(itemListRepository.findById(testListId)).thenReturn(Optional.of(testList));
             when(securityUtils.isAdmin()).thenReturn(false);
@@ -409,7 +452,7 @@ class ItemServiceImplTest {
         @Test
         @DisplayName("should create item as owner (non-admin)")
         void createItem_asOwner_createsItem() throws IOException {
-            ItemRequest request = new ItemRequest("Owner Item", testListId, ItemStatus.AVAILABLE, 3, null);
+            ItemRequest request = new ItemRequest("Owner Item", testListId, ItemStatus.AVAILABLE, 3, null, null);
 
             when(itemListRepository.findById(testListId)).thenReturn(Optional.of(testList));
             when(securityUtils.isAdmin()).thenReturn(false);
@@ -429,7 +472,7 @@ class ItemServiceImplTest {
         @Test
         @DisplayName("should update existing item")
         void updateItem_existingId_updatesItem() throws IOException {
-            ItemRequest request = new ItemRequest("Updated Name", testListId, ItemStatus.TO_VERIFY, 20, null);
+            ItemRequest request = new ItemRequest("Updated Name", testListId, ItemStatus.TO_VERIFY, 20, null, null);
             when(securityUtils.isAdmin()).thenReturn(true);
             when(itemRepository.findById(testId)).thenReturn(Optional.of(testItem));
             when(itemListRepository.findById(testListId)).thenReturn(Optional.of(testList));
@@ -447,7 +490,7 @@ class ItemServiceImplTest {
         @DisplayName("should keep existing status when not provided in request")
         void updateItem_noStatus_keepsExistingStatus() throws IOException {
             testItem.setStatus(ItemStatus.DAMAGED);
-            ItemRequest request = new ItemRequest("Updated Name", testListId, null, null, null);
+            ItemRequest request = new ItemRequest("Updated Name", testListId, null, null, null, null);
             when(securityUtils.isAdmin()).thenReturn(true);
             when(itemRepository.findById(testId)).thenReturn(Optional.of(testItem));
             when(itemListRepository.findById(testListId)).thenReturn(Optional.of(testList));
@@ -461,7 +504,7 @@ class ItemServiceImplTest {
         @Test
         @DisplayName("should update item with image")
         void updateItem_withImage_uploadsToS3() throws IOException {
-            ItemRequest request = new ItemRequest("Updated", testListId, ItemStatus.AVAILABLE, 5, null);
+            ItemRequest request = new ItemRequest("Updated", testListId, ItemStatus.AVAILABLE, 5, null, null);
             byte[] pngBytes = new byte[]{(byte) 0x89, 0x50, 0x4E, 0x47, 0, 0, 0, 0, 0, 0, 0, 0};
             MockMultipartFile image = new MockMultipartFile("image", "test.png", "image/png", pngBytes);
 
@@ -482,7 +525,7 @@ class ItemServiceImplTest {
         @DisplayName("should throw when item not found")
         void updateItem_notFound_throwsException() {
             UUID nonExistingId = UUID.randomUUID();
-            ItemRequest request = new ItemRequest("Updated", testListId, ItemStatus.AVAILABLE, 5, null);
+            ItemRequest request = new ItemRequest("Updated", testListId, ItemStatus.AVAILABLE, 5, null, null);
 
             when(itemRepository.findById(nonExistingId)).thenReturn(Optional.empty());
 

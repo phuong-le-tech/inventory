@@ -44,6 +44,10 @@ public class ItemSpecification {
                 if (criteria.status() != null) {
                     predicates.add(cb.equal(root.get("status"), criteria.status()));
                 }
+
+                if (hasText(criteria.barcode())) {
+                    predicates.add(cb.equal(root.get("barcode"), criteria.barcode()));
+                }
             }
 
             return cb.and(predicates.toArray(new Predicate[0]));

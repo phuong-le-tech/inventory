@@ -100,7 +100,7 @@ class ItemControllerIntegrationTest {
         @Test
         @DisplayName("should create item and retrieve it")
         void createAndRetrieveItem_fullFlow() throws Exception {
-            ItemRequest request = new ItemRequest("Integration Test Item", testList.getId(), ItemStatus.AVAILABLE, 5, null);
+            ItemRequest request = new ItemRequest("Integration Test Item", testList.getId(), ItemStatus.AVAILABLE, 5, null, null);
 
             String jsonData = objectMapper.writeValueAsString(request);
 
@@ -130,7 +130,7 @@ class ItemControllerIntegrationTest {
             when(imageProcessingService.processToWebP(any())).thenReturn(new byte[]{1, 2, 3});
             when(imageStorageService.getPresignedUrl(any())).thenReturn("https://r2.example.com/items/test-key.webp");
 
-            ItemRequest request = new ItemRequest("Item With Image", testList.getId(), ItemStatus.AVAILABLE, 10, null);
+            ItemRequest request = new ItemRequest("Item With Image", testList.getId(), ItemStatus.AVAILABLE, 10, null, null);
 
             String jsonData = objectMapper.writeValueAsString(request);
             // JPEG magic bytes (FF D8 FF) followed by dummy data
@@ -160,7 +160,7 @@ class ItemControllerIntegrationTest {
         void updateItem_fullFlow() throws Exception {
             Item item = createTestItem("Original Name", testList, ItemStatus.AVAILABLE, 5);
 
-            ItemRequest updateRequest = new ItemRequest("Updated Name", testList.getId(), ItemStatus.TO_VERIFY, 15, null);
+            ItemRequest updateRequest = new ItemRequest("Updated Name", testList.getId(), ItemStatus.TO_VERIFY, 15, null, null);
             String jsonData = objectMapper.writeValueAsString(updateRequest);
 
             mockMvc.perform(multipart("/api/v1/items/{id}", item.getId())

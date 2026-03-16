@@ -207,13 +207,42 @@ class ItemControllerTest {
     }
 
     @Nested
+    @DisplayName("GET /api/v1/items/barcode/{code}")
+    class GetItemByBarcodeTests {
+
+        @Test
+        @DisplayName("should return 200 with item when barcode found")
+        void getItemByBarcode_found_returns200() throws Exception {
+            testItem.setBarcode("1234567890");
+            when(itemService.getItemByBarcode("1234567890")).thenReturn(Optional.of(testItem));
+
+            mockMvc.perform(get("/api/v1/items/barcode/{code}", "1234567890")
+                            .with(user(new CustomUserDetails(UUID.randomUUID(), "test@test.com", "USER"))))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.data.id").value(testId.toString()))
+                    .andExpect(jsonPath("$.data.name").value("Test Item"))
+                    .andExpect(jsonPath("$.data.barcode").value("1234567890"));
+        }
+
+        @Test
+        @DisplayName("should return 404 when barcode not found")
+        void getItemByBarcode_notFound_returns404() throws Exception {
+            when(itemService.getItemByBarcode("NONEXISTENT")).thenReturn(Optional.empty());
+
+            mockMvc.perform(get("/api/v1/items/barcode/{code}", "NONEXISTENT")
+                            .with(user(new CustomUserDetails(UUID.randomUUID(), "test@test.com", "USER"))))
+                    .andExpect(status().isNotFound());
+        }
+    }
+
+    @Nested
     @DisplayName("POST /api/v1/items")
     class CreateItemTests {
 
         @Test
         @DisplayName("should create item with valid request")
         void createItem_validRequest_returns201() throws Exception {
-            ItemRequest request = new ItemRequest("New Item", testListId, ItemStatus.AVAILABLE, 5, null);
+            ItemRequest request = new ItemRequest("New Item", testListId, ItemStatus.AVAILABLE, 5, null, null);
             when(itemService.createItem(any(ItemRequest.class), any())).thenReturn(testItem);
 
             String jsonData = objectMapper.writeValueAsString(request);
@@ -231,7 +260,7 @@ class ItemControllerTest {
             when(uploadRateLimiter.tryAcquire(anyString()))
                     .thenReturn(new ApiRateLimiter.RateLimitResult(false, 0));
 
-            ItemRequest request = new ItemRequest("New Item", testListId, ItemStatus.AVAILABLE, 5, null);
+            ItemRequest request = new ItemRequest("New Item", testListId, ItemStatus.AVAILABLE, 5, null, null);
             String jsonData = objectMapper.writeValueAsString(request);
 
             mockMvc.perform(multipart("/api/v1/items")
@@ -255,7 +284,7 @@ class ItemControllerTest {
         @Test
         @DisplayName("should create item with image")
         void createItem_withImage_returns201() throws Exception {
-            ItemRequest request = new ItemRequest("New Item", testListId, ItemStatus.AVAILABLE, 10, null);
+            ItemRequest request = new ItemRequest("New Item", testListId, ItemStatus.AVAILABLE, 10, null, null);
             when(itemService.createItem(any(ItemRequest.class), any())).thenReturn(testItem);
 
             String jsonData = objectMapper.writeValueAsString(request);
@@ -277,7 +306,7 @@ class ItemControllerTest {
         @Test
         @DisplayName("should update existing item")
         void updateItem_existingId_returnsUpdatedItem() throws Exception {
-            ItemRequest request = new ItemRequest("Updated Item", testListId, ItemStatus.TO_VERIFY, 20, null);
+            ItemRequest request = new ItemRequest("Updated Item", testListId, ItemStatus.TO_VERIFY, 20, null, null);
             Item updatedItem = new Item();
             updatedItem.setId(testId);
             updatedItem.setName("Updated Item");
@@ -307,7 +336,7 @@ class ItemControllerTest {
             when(uploadRateLimiter.tryAcquire(anyString()))
                     .thenReturn(new ApiRateLimiter.RateLimitResult(false, 0));
 
-            ItemRequest request = new ItemRequest("Updated Item", testListId, ItemStatus.TO_VERIFY, 20, null);
+            ItemRequest request = new ItemRequest("Updated Item", testListId, ItemStatus.TO_VERIFY, 20, null, null);
             String jsonData = objectMapper.writeValueAsString(request);
 
             mockMvc.perform(multipart("/api/v1/items/{id}", testId)

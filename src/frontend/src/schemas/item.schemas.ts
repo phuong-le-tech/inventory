@@ -38,6 +38,7 @@ export function createItemSchema(fieldDefs: CustomFieldDefinition[] = []) {
     itemListId: z.string().min(1, 'La liste est requise'),
     status: z.enum(STATUS_OPTIONS),
     stock: z.number().int().min(0, 'Le stock ne peut pas être négatif'),
+    barcode: z.string().max(255, 'Le code-barres ne doit pas dépasser 255 caractères').optional().or(z.literal('')),
     customFieldValues: z
       .record(z.string(), z.unknown())
       .optional()

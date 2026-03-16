@@ -218,7 +218,7 @@ public class AdminController {
             }
         }
 
-        ItemSearchCriteria criteria = new ItemSearchCriteria(search, itemListId, itemStatus);
+        ItemSearchCriteria criteria = new ItemSearchCriteria(search, itemListId, itemStatus, null);
         // null userId = no user scope = admin sees all
         Page<Item> itemsPage = itemRepository.findAll(ItemSpecification.withCriteria(criteria, null), pageable);
         Page<AdminItemResponse> responsePage = itemsPage.map(item -> AdminItemResponse.fromEntity(item, imageStorageService));

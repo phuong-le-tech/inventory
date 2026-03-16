@@ -1,9 +1,9 @@
 import { useEffect, useState, useMemo, useRef, useCallback } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useForm, Controller } from "react-hook-form";
 import type { Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Upload, AlertCircle, X } from "lucide-react";
+import { Upload, AlertCircle, X, ScanLine } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { itemsApi, listsApi } from "../services/api";
 import { queryKeys } from "../lib/queryKeys";
@@ -34,6 +34,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import { Breadcrumb } from "../components/Breadcrumb";
+import BarcodeScannerModal from "../components/BarcodeScannerModal";
 import { sanitizeImageUrl } from "../utils/imageUtils";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
@@ -46,6 +47,7 @@ const ALLOWED_FILE_TYPES = [
 
 export default function ItemForm() {
   const { listId, itemId } = useParams();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const isEditing = Boolean(itemId);
   const { showToast } = useToast();
@@ -59,6 +61,7 @@ export default function ItemForm() {
     CustomFieldDefinition[]
   >([]);
   const [selectedListName, setSelectedListName] = useState("");
+  const [scannerOpen, setScannerOpen] = useState(false);
 
   const schemaRef = useRef(createItemSchema([]));
   const resolver = useCallback<Resolver<ItemFormData>>(
@@ -82,6 +85,7 @@ export default function ItemForm() {
       itemListId: listId || "",
       status: "AVAILABLE",
       stock: 0,
+      barcode: searchParams.get("barcode") || "",
       customFieldValues: {},
     },
   });
@@ -120,6 +124,7 @@ export default function ItemForm() {
         itemListId: itemData.itemListId,
         status: itemData.status,
         stock: itemData.stock,
+        barcode: itemData.barcode || "",
         customFieldValues: itemData.customFieldValues || {},
       });
       const safeUrl = sanitizeImageUrl(itemData.imageUrl);
@@ -417,6 +422,47 @@ export default function ItemForm() {
               </div>
             </div>
 
+            <div className="space-y-2">
+              <Label htmlFor="item-barcode">Code-barres</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="item-barcode"
+                  type="text"
+                  {...register("barcode")}
+                  className={cn(
+                    "flex-1",
+                    errors.barcode
+                      ? "border-destructive focus-visible:ring-destructive"
+                      : "",
+                  )}
+                  placeholder="Scannez ou entrez un code-barres"
+                  aria-invalid={!!errors.barcode}
+                  aria-describedby={
+                    errors.barcode ? "item-barcode-error" : undefined
+                  }
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setScannerOpen(true)}
+                  title="Scanner un code"
+                >
+                  <ScanLine className="h-4 w-4" />
+                </Button>
+              </div>
+              {errors.barcode && (
+                <p
+                  id="item-barcode-error"
+                  role="alert"
+                  className="text-sm text-destructive flex items-center"
+                >
+                  <AlertCircle className="h-4 w-4 mr-1.5" />
+                  {errors.barcode.message}
+                </p>
+              )}
+            </div>
+
             {/* Custom Fields */}
             {fieldDefs.length > 0 && (
               <div className="space-y-4">
@@ -682,6 +728,12 @@ export default function ItemForm() {
           </Button>
         </div>
       </form>
+
+      <BarcodeScannerModal
+        isOpen={scannerOpen}
+        onClose={() => setScannerOpen(false)}
+        onScan={(code) => setValue("barcode", code, { shouldDirty: true })}
+      />
     </div>
   );
 }
