@@ -34,6 +34,8 @@ const AdminDashboardPage = lazy(() =>
     default: m.AdminDashboardPage,
   })),
 );
+const WorkspacesPage = lazy(() => import("./pages/WorkspacesPage"));
+const WorkspaceSettingsPage = lazy(() => import("./pages/WorkspaceSettingsPage"));
 const SettingsPage = lazy(() => import("./pages/SettingsPage"));
 const UpgradePage = lazy(() => import("./pages/UpgradePage"));
 const PaymentSuccess = lazy(() => import("./pages/PaymentSuccess"));
@@ -148,6 +150,26 @@ export default function App() {
             <ProtectedRoute>
               <Layout>
                 <ItemForm />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/workspaces"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <WorkspacesPage />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/workspaces/:id/settings"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <WorkspaceSettingsPage />
               </Layout>
             </ProtectedRoute>
           }

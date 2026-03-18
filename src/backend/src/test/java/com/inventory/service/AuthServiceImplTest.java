@@ -89,6 +89,9 @@ class AuthServiceImplTest {
     private Executor emailExecutor;
 
     @Mock
+    private IWorkspaceService workspaceService;
+
+    @Mock
     private HttpServletResponse httpResponse;
 
     @InjectMocks

@@ -1,10 +1,15 @@
 package com.inventory.controller;
 
 import com.inventory.enums.Role;
+import com.inventory.enums.WorkspaceRole;
 import com.inventory.model.User;
+import com.inventory.model.Workspace;
+import com.inventory.model.WorkspaceMember;
 import com.inventory.repository.ItemListRepository;
 import com.inventory.repository.ItemRepository;
 import com.inventory.repository.UserRepository;
+import com.inventory.repository.WorkspaceMemberRepository;
+import com.inventory.repository.WorkspaceRepository;
 import com.inventory.security.JwtService;
 import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.BeforeEach;
@@ -46,6 +51,12 @@ class AuthorizationBoundaryTest {
     @Autowired
     private ItemRepository itemRepository;
 
+    @Autowired
+    private WorkspaceRepository workspaceRepository;
+
+    @Autowired
+    private WorkspaceMemberRepository workspaceMemberRepository;
+
     private User userA;
     private User userB;
     private User adminUser;
@@ -75,10 +86,23 @@ class AuthorizationBoundaryTest {
         adminUser.setRole(Role.ADMIN);
         adminUser = userRepository.save(adminUser);
 
+        Workspace workspaceA = new Workspace();
+        workspaceA.setName("User A Workspace");
+        workspaceA.setOwner(userA);
+        workspaceA.setDefault(true);
+        workspaceA = workspaceRepository.save(workspaceA);
+
+        WorkspaceMember memberA = new WorkspaceMember();
+        memberA.setWorkspace(workspaceA);
+        memberA.setUser(userA);
+        memberA.setRole(WorkspaceRole.OWNER);
+        workspaceMemberRepository.save(memberA);
+
         userAList = new ItemList();
         userAList.setName("User A's List");
         userAList.setCategory("Electronics");
         userAList.setUser(userA);
+        userAList.setWorkspace(workspaceA);
         userAList = itemListRepository.save(userAList);
     }
 

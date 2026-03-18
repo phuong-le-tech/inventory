@@ -4,12 +4,17 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.inventory.dto.request.ItemRequest;
 import com.inventory.enums.ItemStatus;
 import com.inventory.enums.Role;
+import com.inventory.enums.WorkspaceRole;
 import com.inventory.model.Item;
 import com.inventory.model.ItemList;
 import com.inventory.model.User;
+import com.inventory.model.Workspace;
+import com.inventory.model.WorkspaceMember;
 import com.inventory.repository.ItemListRepository;
 import com.inventory.repository.ItemRepository;
 import com.inventory.repository.UserRepository;
+import com.inventory.repository.WorkspaceMemberRepository;
+import com.inventory.repository.WorkspaceRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -58,6 +63,12 @@ class ItemControllerIntegrationTest {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private WorkspaceRepository workspaceRepository;
+
+    @Autowired
+    private WorkspaceMemberRepository workspaceMemberRepository;
+
     @MockitoBean
     private com.inventory.service.ImageProcessingService imageProcessingService;
 
@@ -66,6 +77,7 @@ class ItemControllerIntegrationTest {
 
     private ItemList testList;
     private User testUser;
+    private Workspace testWorkspace;
 
     @BeforeEach
     void setUp() {
@@ -79,10 +91,23 @@ class ItemControllerIntegrationTest {
         testUser.setRole(Role.USER);
         testUser = userRepository.save(testUser);
 
+        testWorkspace = new Workspace();
+        testWorkspace.setName("Test Workspace");
+        testWorkspace.setOwner(testUser);
+        testWorkspace.setDefault(true);
+        testWorkspace = workspaceRepository.save(testWorkspace);
+
+        WorkspaceMember member = new WorkspaceMember();
+        member.setWorkspace(testWorkspace);
+        member.setUser(testUser);
+        member.setRole(WorkspaceRole.OWNER);
+        workspaceMemberRepository.save(member);
+
         testList = new ItemList();
         testList.setName("Test List");
         testList.setCategory("Electronics");
         testList.setUser(testUser);
+        testList.setWorkspace(testWorkspace);
         testList = itemListRepository.save(testList);
 
         // Set up SecurityContext so service-layer auth checks pass
@@ -233,6 +258,7 @@ class ItemControllerIntegrationTest {
             anotherList.setName("Another List");
             anotherList.setCategory("Clothing");
             anotherList.setUser(testUser);
+            anotherList.setWorkspace(testWorkspace);
             anotherList = itemListRepository.save(anotherList);
 
             createTestItem("Item 1", testList, ItemStatus.AVAILABLE, 5);
@@ -271,6 +297,7 @@ class ItemControllerIntegrationTest {
             clothingList.setName("Clothing List");
             clothingList.setCategory("Clothing");
             clothingList.setUser(testUser);
+            clothingList.setWorkspace(testWorkspace);
             clothingList = itemListRepository.save(clothingList);
 
             createTestItem("Item 1", testList, ItemStatus.AVAILABLE, 5);

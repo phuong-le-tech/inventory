@@ -4,6 +4,7 @@ import com.inventory.model.Item;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -55,4 +56,25 @@ public interface ItemRepository extends JpaRepository<Item, UUID>, JpaSpecificat
 
     Optional<Item> findByBarcodeAndItemList_User_Id(String barcode, UUID userId);
 
+    // Workspace-scoped queries for dashboard stats
+    @Query("SELECT COUNT(i) FROM Item i WHERE i.itemList.workspace.id IN :workspaceIds")
+    long countByWorkspaceIds(@Param("workspaceIds") List<UUID> workspaceIds);
+
+    @Query("SELECT i.status, COUNT(i) FROM Item i WHERE i.itemList.workspace.id IN :workspaceIds GROUP BY i.status")
+    List<Object[]> countByStatusAndWorkspaceIds(@Param("workspaceIds") List<UUID> workspaceIds);
+
+    @Query("SELECT i.itemList.category, COUNT(i) FROM Item i WHERE i.itemList.workspace.id IN :workspaceIds GROUP BY i.itemList.category")
+    List<Object[]> countByCategoryAndWorkspaceIds(@Param("workspaceIds") List<UUID> workspaceIds);
+
+    @Query("SELECT COALESCE(SUM(i.stock), 0) FROM Item i WHERE i.itemList.workspace.id IN :workspaceIds")
+    long sumStockByWorkspaceIds(@Param("workspaceIds") List<UUID> workspaceIds);
+
+    @Query("SELECT i.itemList.name, COUNT(i), COALESCE(SUM(i.stock), 0) FROM Item i WHERE i.itemList.workspace.id IN :workspaceIds GROUP BY i.itemList.name")
+    List<Object[]> getListsOverviewByWorkspaceIds(@Param("workspaceIds") List<UUID> workspaceIds);
+
+    @Query("SELECT i FROM Item i JOIN FETCH i.itemList WHERE i.itemList.workspace.id IN :workspaceIds ORDER BY i.updatedAt DESC LIMIT 5")
+    List<Item> findTop5ByWorkspaceIdsOrderByUpdatedAtDesc(@Param("workspaceIds") List<UUID> workspaceIds);
+
+    @Query("SELECT i FROM Item i WHERE i.barcode = :barcode AND i.itemList.workspace.id IN :workspaceIds")
+    Optional<Item> findByBarcodeAndWorkspaceIds(@Param("barcode") String barcode, @Param("workspaceIds") List<UUID> workspaceIds);
 }

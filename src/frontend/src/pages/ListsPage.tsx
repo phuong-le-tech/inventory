@@ -5,6 +5,7 @@ import { AnimatePresence } from 'motion/react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { listsApi } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import { useWorkspace } from '../contexts/WorkspaceContext';
 import { SkeletonCard, SkeletonText, Skeleton } from '../components/Skeleton';
 import { useToast } from '../components/Toast';
 import ConfirmModal from '../components/ConfirmModal';
@@ -45,12 +46,21 @@ export default function ListsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const { showToast } = useToast();
   const { isPremium } = useAuth();
+  const { currentWorkspace, error: workspaceError, refreshWorkspaces } = useWorkspace();
   const queryClient = useQueryClient();
 
-  const params = { page, size: 9, sortBy: 'createdAt', sortDir: 'desc' as const };
+  const isViewer = currentWorkspace?.role === 'VIEWER';
+  const params = {
+    page,
+    size: 9,
+    sortBy: 'createdAt',
+    sortDir: 'desc' as const,
+    workspaceId: currentWorkspace?.id,
+  };
   const { data, isLoading: loading } = useQuery({
     queryKey: queryKeys.lists.list(params),
     queryFn: () => listsApi.getAll(params),
+    enabled: !!currentWorkspace,
   });
 
   const lists = data?.content ?? [];
@@ -88,6 +98,15 @@ export default function ListsPage() {
     deleteMutation.mutate(id);
   };
 
+  if (workspaceError) {
+    return (
+      <div className="text-center py-24">
+        <p className="text-lg text-destructive mb-4">{workspaceError}</p>
+        <Button onClick={() => refreshWorkspaces()}>Réessayer</Button>
+      </div>
+    );
+  }
+
   if (loading && lists.length === 0) {
     return (
       <div>
@@ -121,7 +140,7 @@ export default function ListsPage() {
           </BlurFade>
         </div>
         <BlurFade delay={0.2}>
-          {!isPremium && totalElements >= FREE_LIST_LIMIT ? (
+          {isViewer ? null : !isPremium && totalElements >= FREE_LIST_LIMIT ? (
             <Button asChild>
               <Link to="/upgrade">
                 <Crown className="h-4 w-4 mr-2" />
@@ -215,6 +234,7 @@ export default function ListsPage() {
                 </Link>
 
                 {/* Dropdown menu — positioned top-right, outside the link */}
+                {!isViewer && (
                 <div className="absolute top-4 right-4">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -241,6 +261,7 @@ export default function ListsPage() {
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
+                )}
               </div>
             </StaggeredItem>
           ))}

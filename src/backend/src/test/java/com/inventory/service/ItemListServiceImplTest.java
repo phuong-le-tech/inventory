@@ -6,6 +6,7 @@ import com.inventory.dto.response.CsvExportResult;
 import com.inventory.enums.CustomFieldType;
 import com.inventory.enums.ItemStatus;
 import com.inventory.enums.Role;
+import com.inventory.enums.WorkspaceRole;
 import com.inventory.exception.ExportLimitExceededException;
 import com.inventory.exception.ItemListNotFoundException;
 import com.inventory.exception.ListLimitExceededException;
@@ -13,10 +14,14 @@ import com.inventory.exception.UnauthorizedException;
 import com.inventory.model.Item;
 import com.inventory.model.ItemList;
 import com.inventory.model.User;
+import com.inventory.model.Workspace;
+import com.inventory.model.WorkspaceMember;
 import com.inventory.repository.ItemListRepository;
 import com.inventory.repository.ItemRepository;
 import com.inventory.repository.UserRepository;
+import com.inventory.repository.WorkspaceRepository;
 import com.inventory.security.SecurityUtils;
+import com.inventory.security.WorkspaceAccessUtils;
 import com.inventory.service.impl.ItemListServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -53,7 +58,13 @@ class ItemListServiceImplTest {
     private UserRepository userRepository;
 
     @Mock
+    private WorkspaceRepository workspaceRepository;
+
+    @Mock
     private SecurityUtils securityUtils;
+
+    @Mock
+    private WorkspaceAccessUtils workspaceAccessUtils;
 
     @Mock
     private ItemRepository itemRepository;
@@ -66,23 +77,31 @@ class ItemListServiceImplTest {
 
     private User testUser;
     private ItemList testList;
+    private Workspace testWorkspace;
     private UUID testUserId;
     private UUID testListId;
+    private UUID testWorkspaceId;
 
     @BeforeEach
     void setUp() {
         testUserId = UUID.randomUUID();
         testListId = UUID.randomUUID();
+        testWorkspaceId = UUID.randomUUID();
 
         testUser = new User();
         testUser.setId(testUserId);
         testUser.setEmail("test@example.com");
+
+        testWorkspace = new Workspace();
+        testWorkspace.setId(testWorkspaceId);
+        testWorkspace.setName("Test Workspace");
 
         testList = new ItemList();
         testList.setId(testListId);
         testList.setName("Test List");
         testList.setCategory("Electronics");
         testList.setUser(testUser);
+        testList.setWorkspace(testWorkspace);
     }
 
     @Nested
@@ -97,7 +116,7 @@ class ItemListServiceImplTest {
             when(securityUtils.isAdmin()).thenReturn(true);
             when(itemListRepository.findAll(pageable)).thenReturn(expected);
 
-            Page<ItemList> result = itemListService.getAllLists(pageable);
+            Page<ItemList> result = itemListService.getAllLists(pageable, null);
 
             assertThat(result.getContent()).hasSize(1);
             verify(itemListRepository).findAll(pageable);
@@ -105,7 +124,7 @@ class ItemListServiceImplTest {
         }
 
         @Test
-        @DisplayName("regular user should see only their lists")
+        @DisplayName("regular user should see only their lists when no workspaceId provided")
         void user_seesOwnLists() {
             Pageable pageable = PageRequest.of(0, 10);
             Page<ItemList> expected = new PageImpl<>(List.of(testList));
@@ -113,7 +132,7 @@ class ItemListServiceImplTest {
             when(securityUtils.getCurrentUserId()).thenReturn(Optional.of(testUserId));
             when(itemListRepository.findByUserId(testUserId, pageable)).thenReturn(expected);
 
-            Page<ItemList> result = itemListService.getAllLists(pageable);
+            Page<ItemList> result = itemListService.getAllLists(pageable, null);
 
             assertThat(result.getContent()).hasSize(1);
             verify(itemListRepository).findByUserId(testUserId, pageable);
@@ -126,7 +145,7 @@ class ItemListServiceImplTest {
             when(securityUtils.isAdmin()).thenReturn(false);
             when(securityUtils.getCurrentUserId()).thenReturn(Optional.empty());
 
-            assertThatThrownBy(() -> itemListService.getAllLists(pageable))
+            assertThatThrownBy(() -> itemListService.getAllLists(pageable, null))
                     .isInstanceOf(UnauthorizedException.class);
         }
     }
@@ -147,11 +166,11 @@ class ItemListServiceImplTest {
         }
 
         @Test
-        @DisplayName("user should access own list")
+        @DisplayName("user should access list in accessible workspace")
         void user_accessesOwnList() {
             when(securityUtils.isAdmin()).thenReturn(false);
-            when(securityUtils.getCurrentUserId()).thenReturn(Optional.of(testUserId));
-            when(itemListRepository.findByIdAndUserId(testListId, testUserId))
+            when(workspaceAccessUtils.getAccessibleWorkspaceIds()).thenReturn(List.of(testWorkspaceId));
+            when(itemListRepository.findByIdAndWorkspaceIdIn(testListId, List.of(testWorkspaceId)))
                     .thenReturn(Optional.of(testList));
 
             ItemList result = itemListService.getListById(testListId);
@@ -160,12 +179,12 @@ class ItemListServiceImplTest {
         }
 
         @Test
-        @DisplayName("user should get 404 for another user's list")
+        @DisplayName("user should get 404 for list in inaccessible workspace")
         void user_cannotAccessOthersList() {
-            UUID otherUserId = UUID.randomUUID();
+            UUID otherWorkspaceId = UUID.randomUUID();
             when(securityUtils.isAdmin()).thenReturn(false);
-            when(securityUtils.getCurrentUserId()).thenReturn(Optional.of(otherUserId));
-            when(itemListRepository.findByIdAndUserId(testListId, otherUserId))
+            when(workspaceAccessUtils.getAccessibleWorkspaceIds()).thenReturn(List.of(otherWorkspaceId));
+            when(itemListRepository.findByIdAndWorkspaceIdIn(testListId, List.of(otherWorkspaceId)))
                     .thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> itemListService.getListById(testListId))
@@ -189,11 +208,12 @@ class ItemListServiceImplTest {
     class CreateListTests {
 
         @Test
-        @DisplayName("should create list for current user")
+        @DisplayName("should create list for current user using default workspace")
         void createList_success() {
-            ItemListRequest request = new ItemListRequest("New List", "Description", "Category", null);
+            ItemListRequest request = new ItemListRequest("New List", "Description", "Category", null, null);
             when(securityUtils.getCurrentUserId()).thenReturn(Optional.of(testUserId));
             when(userRepository.findByIdWithLock(testUserId)).thenReturn(Optional.of(testUser));
+            when(workspaceRepository.findByOwnerIdAndIsDefaultTrue(testUserId)).thenReturn(Optional.of(testWorkspace));
             when(itemListRepository.save(any(ItemList.class))).thenAnswer(invocation -> {
                 ItemList saved = invocation.getArgument(0);
                 saved.setId(UUID.randomUUID());
@@ -211,7 +231,7 @@ class ItemListServiceImplTest {
         @Test
         @DisplayName("unauthenticated user cannot create list")
         void unauthenticated_throwsException() {
-            ItemListRequest request = new ItemListRequest("New List", null, null, null);
+            ItemListRequest request = new ItemListRequest("New List", null, null, null, null);
             when(securityUtils.getCurrentUserId()).thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> itemListService.createList(request))
@@ -222,9 +242,10 @@ class ItemListServiceImplTest {
         @DisplayName("free user should be blocked at 5 lists")
         void freeUser_blockedAtLimit() {
             testUser.setRole(Role.USER);
-            ItemListRequest request = new ItemListRequest("Sixth List", null, null, null);
+            ItemListRequest request = new ItemListRequest("Sixth List", null, null, null, null);
             when(securityUtils.getCurrentUserId()).thenReturn(Optional.of(testUserId));
             when(userRepository.findByIdWithLock(testUserId)).thenReturn(Optional.of(testUser));
+            when(workspaceRepository.findByOwnerIdAndIsDefaultTrue(testUserId)).thenReturn(Optional.of(testWorkspace));
             when(itemListRepository.countByUserId(testUserId)).thenReturn(5L);
 
             assertThatThrownBy(() -> itemListService.createList(request))
@@ -236,9 +257,10 @@ class ItemListServiceImplTest {
         @DisplayName("free user should be allowed under 5 lists")
         void freeUser_allowedUnderLimit() {
             testUser.setRole(Role.USER);
-            ItemListRequest request = new ItemListRequest("Fourth List", null, null, null);
+            ItemListRequest request = new ItemListRequest("Fourth List", null, null, null, null);
             when(securityUtils.getCurrentUserId()).thenReturn(Optional.of(testUserId));
             when(userRepository.findByIdWithLock(testUserId)).thenReturn(Optional.of(testUser));
+            when(workspaceRepository.findByOwnerIdAndIsDefaultTrue(testUserId)).thenReturn(Optional.of(testWorkspace));
             when(itemListRepository.countByUserId(testUserId)).thenReturn(3L);
             when(itemListRepository.save(any(ItemList.class))).thenAnswer(invocation -> {
                 ItemList saved = invocation.getArgument(0);
@@ -256,9 +278,10 @@ class ItemListServiceImplTest {
         @DisplayName("premium user should have no list limit")
         void premiumUser_noLimit() {
             testUser.setRole(Role.PREMIUM_USER);
-            ItemListRequest request = new ItemListRequest("Unlimited List", null, null, null);
+            ItemListRequest request = new ItemListRequest("Unlimited List", null, null, null, null);
             when(securityUtils.getCurrentUserId()).thenReturn(Optional.of(testUserId));
             when(userRepository.findByIdWithLock(testUserId)).thenReturn(Optional.of(testUser));
+            when(workspaceRepository.findByOwnerIdAndIsDefaultTrue(testUserId)).thenReturn(Optional.of(testWorkspace));
             when(itemListRepository.save(any(ItemList.class))).thenAnswer(invocation -> {
                 ItemList saved = invocation.getArgument(0);
                 saved.setId(UUID.randomUUID());
@@ -275,9 +298,10 @@ class ItemListServiceImplTest {
         @DisplayName("admin should have no list limit")
         void admin_noLimit() {
             testUser.setRole(Role.ADMIN);
-            ItemListRequest request = new ItemListRequest("Admin List", null, null, null);
+            ItemListRequest request = new ItemListRequest("Admin List", null, null, null, null);
             when(securityUtils.getCurrentUserId()).thenReturn(Optional.of(testUserId));
             when(userRepository.findByIdWithLock(testUserId)).thenReturn(Optional.of(testUser));
+            when(workspaceRepository.findByOwnerIdAndIsDefaultTrue(testUserId)).thenReturn(Optional.of(testWorkspace));
             when(itemListRepository.save(any(ItemList.class))).thenAnswer(invocation -> {
                 ItemList saved = invocation.getArgument(0);
                 saved.setId(UUID.randomUUID());
@@ -307,24 +331,31 @@ class ItemListServiceImplTest {
         }
 
         @Test
-        @DisplayName("user should delete own list")
+        @DisplayName("user (OWNER) should delete their list")
         void user_deletesOwnList() {
+            WorkspaceMember ownerMember = new WorkspaceMember();
+            ownerMember.setRole(WorkspaceRole.OWNER);
+
             when(securityUtils.isAdmin()).thenReturn(false);
-            when(securityUtils.getCurrentUserId()).thenReturn(Optional.of(testUserId));
-            when(itemListRepository.existsByIdAndUserId(testListId, testUserId)).thenReturn(true);
+            when(workspaceAccessUtils.getAccessibleWorkspaceIds()).thenReturn(List.of(testWorkspaceId));
+            when(itemListRepository.findByIdAndWorkspaceIdIn(testListId, List.of(testWorkspaceId)))
+                    .thenReturn(Optional.of(testList));
+            when(workspaceAccessUtils.requireRole(testWorkspaceId, WorkspaceRole.OWNER))
+                    .thenReturn(ownerMember);
 
             itemListService.deleteList(testListId);
 
-            verify(itemListRepository).deleteById(testListId);
+            verify(itemListRepository).delete(testList);
         }
 
         @Test
-        @DisplayName("user cannot delete another user's list")
+        @DisplayName("user cannot delete list in inaccessible workspace")
         void user_cannotDeleteOthersList() {
-            UUID otherUserId = UUID.randomUUID();
+            UUID otherWorkspaceId = UUID.randomUUID();
             when(securityUtils.isAdmin()).thenReturn(false);
-            when(securityUtils.getCurrentUserId()).thenReturn(Optional.of(otherUserId));
-            when(itemListRepository.existsByIdAndUserId(testListId, otherUserId)).thenReturn(false);
+            when(workspaceAccessUtils.getAccessibleWorkspaceIds()).thenReturn(List.of(otherWorkspaceId));
+            when(itemListRepository.findByIdAndWorkspaceIdIn(testListId, List.of(otherWorkspaceId)))
+                    .thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> itemListService.deleteList(testListId))
                     .isInstanceOf(ItemListNotFoundException.class);

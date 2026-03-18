@@ -11,7 +11,7 @@ import java.util.UUID;
 
 public interface IItemListService {
 
-    Page<ItemList> getAllLists(@NonNull Pageable pageable);
+    Page<ItemList> getAllLists(@NonNull Pageable pageable, UUID workspaceId);
 
     ItemList getListById(@NonNull UUID id);
 

@@ -82,7 +82,7 @@ class ItemListControllerTest {
         @DisplayName("should return paginated lists with default parameters")
         void getAllLists_defaultParams_returnsPageResponse() throws Exception {
             Pageable expectedPageable = PageRequest.of(0, 10, Sort.by("createdAt").descending());
-            when(itemListService.getAllLists(expectedPageable))
+            when(itemListService.getAllLists(expectedPageable, null))
                     .thenReturn(new PageImpl<>(List.of(testList), expectedPageable, 1));
 
             mockMvc.perform(get("/api/v1/lists")
@@ -104,7 +104,7 @@ class ItemListControllerTest {
         @DisplayName("should support custom pagination and sorting parameters")
         void getAllLists_customParams_passesCorrectPageable() throws Exception {
             Pageable expectedPageable = PageRequest.of(1, 5, Sort.by("name").ascending());
-            when(itemListService.getAllLists(expectedPageable))
+            when(itemListService.getAllLists(expectedPageable, null))
                     .thenReturn(new PageImpl<>(List.of(), expectedPageable, 0));
 
             mockMvc.perform(get("/api/v1/lists")
@@ -123,7 +123,7 @@ class ItemListControllerTest {
         @DisplayName("should fall back to createdAt when sort field is not allowed")
         void getAllLists_invalidSortField_fallsBackToCreatedAt() throws Exception {
             Pageable expectedPageable = PageRequest.of(0, 10, Sort.by("createdAt").descending());
-            when(itemListService.getAllLists(expectedPageable))
+            when(itemListService.getAllLists(expectedPageable, null))
                     .thenReturn(new PageImpl<>(List.of(), expectedPageable, 0));
 
             mockMvc.perform(get("/api/v1/lists")
@@ -131,14 +131,14 @@ class ItemListControllerTest {
                             .with(user(userDetails)))
                     .andExpect(status().isOk());
 
-            verify(itemListService).getAllLists(expectedPageable);
+            verify(itemListService).getAllLists(expectedPageable, null);
         }
 
         @Test
         @DisplayName("should clamp size to minimum of 1 when size is 0 or negative")
         void getAllLists_sizeTooSmall_clampsToOne() throws Exception {
             Pageable expectedPageable = PageRequest.of(0, 1, Sort.by("createdAt").descending());
-            when(itemListService.getAllLists(expectedPageable))
+            when(itemListService.getAllLists(expectedPageable, null))
                     .thenReturn(new PageImpl<>(List.of(), expectedPageable, 0));
 
             mockMvc.perform(get("/api/v1/lists")
@@ -146,14 +146,14 @@ class ItemListControllerTest {
                             .with(user(userDetails)))
                     .andExpect(status().isOk());
 
-            verify(itemListService).getAllLists(expectedPageable);
+            verify(itemListService).getAllLists(expectedPageable, null);
         }
 
         @Test
         @DisplayName("should clamp size to maximum of 100 when size exceeds limit")
         void getAllLists_sizeTooLarge_clampsTo100() throws Exception {
             Pageable expectedPageable = PageRequest.of(0, 100, Sort.by("createdAt").descending());
-            when(itemListService.getAllLists(expectedPageable))
+            when(itemListService.getAllLists(expectedPageable, null))
                     .thenReturn(new PageImpl<>(List.of(), expectedPageable, 0));
 
             mockMvc.perform(get("/api/v1/lists")
@@ -161,14 +161,14 @@ class ItemListControllerTest {
                             .with(user(userDetails)))
                     .andExpect(status().isOk());
 
-            verify(itemListService).getAllLists(expectedPageable);
+            verify(itemListService).getAllLists(expectedPageable, null);
         }
 
         @Test
         @DisplayName("should return empty page when no lists exist")
         void getAllLists_noLists_returnsEmptyPage() throws Exception {
             Pageable expectedPageable = PageRequest.of(0, 10, Sort.by("createdAt").descending());
-            when(itemListService.getAllLists(expectedPageable))
+            when(itemListService.getAllLists(expectedPageable, null))
                     .thenReturn(new PageImpl<>(List.of(), expectedPageable, 0));
 
             mockMvc.perform(get("/api/v1/lists")
@@ -182,7 +182,7 @@ class ItemListControllerTest {
         @DisplayName("should support sorting by updatedAt ascending")
         void getAllLists_sortByUpdatedAtAsc_passesCorrectSort() throws Exception {
             Pageable expectedPageable = PageRequest.of(0, 10, Sort.by("updatedAt").ascending());
-            when(itemListService.getAllLists(expectedPageable))
+            when(itemListService.getAllLists(expectedPageable, null))
                     .thenReturn(new PageImpl<>(List.of(), expectedPageable, 0));
 
             mockMvc.perform(get("/api/v1/lists")
@@ -191,14 +191,14 @@ class ItemListControllerTest {
                             .with(user(userDetails)))
                     .andExpect(status().isOk());
 
-            verify(itemListService).getAllLists(expectedPageable);
+            verify(itemListService).getAllLists(expectedPageable, null);
         }
 
         @Test
         @DisplayName("should support sorting by category")
         void getAllLists_sortByCategory_passesCorrectSort() throws Exception {
             Pageable expectedPageable = PageRequest.of(0, 10, Sort.by("category").descending());
-            when(itemListService.getAllLists(expectedPageable))
+            when(itemListService.getAllLists(expectedPageable, null))
                     .thenReturn(new PageImpl<>(List.of(), expectedPageable, 0));
 
             mockMvc.perform(get("/api/v1/lists")
@@ -206,7 +206,7 @@ class ItemListControllerTest {
                             .with(user(userDetails)))
                     .andExpect(status().isOk());
 
-            verify(itemListService).getAllLists(expectedPageable);
+            verify(itemListService).getAllLists(expectedPageable, null);
         }
     }
 
@@ -250,7 +250,7 @@ class ItemListControllerTest {
         @Test
         @DisplayName("should create list with valid request")
         void createList_validRequest_returns201() throws Exception {
-            ItemListRequest request = new ItemListRequest("New List", "Description", "Category", null);
+            ItemListRequest request = new ItemListRequest("New List", "Description", "Category", null, null);
             when(itemListService.createList(any(ItemListRequest.class))).thenReturn(testList);
 
             mockMvc.perform(post("/api/v1/lists")
@@ -265,7 +265,7 @@ class ItemListControllerTest {
         @Test
         @DisplayName("should return 400 when name is blank")
         void createList_blankName_returns400() throws Exception {
-            ItemListRequest request = new ItemListRequest("", "Description", "Category", null);
+            ItemListRequest request = new ItemListRequest("", "Description", "Category", null, null);
 
             mockMvc.perform(post("/api/v1/lists")
                             .contentType(MediaType.APPLICATION_JSON)
@@ -278,7 +278,7 @@ class ItemListControllerTest {
         @Test
         @DisplayName("should return 400 when name is null")
         void createList_nullName_returns400() throws Exception {
-            ItemListRequest request = new ItemListRequest(null, "Description", "Category", null);
+            ItemListRequest request = new ItemListRequest(null, "Description", "Category", null, null);
 
             mockMvc.perform(post("/api/v1/lists")
                             .contentType(MediaType.APPLICATION_JSON)
@@ -292,7 +292,7 @@ class ItemListControllerTest {
         @DisplayName("should return 400 when name exceeds 100 characters")
         void createList_nameTooLong_returns400() throws Exception {
             String longName = "a".repeat(101);
-            ItemListRequest request = new ItemListRequest(longName, "Description", "Category", null);
+            ItemListRequest request = new ItemListRequest(longName, "Description", "Category", null, null);
 
             mockMvc.perform(post("/api/v1/lists")
                             .contentType(MediaType.APPLICATION_JSON)
@@ -307,7 +307,7 @@ class ItemListControllerTest {
         @DisplayName("should return 400 when description exceeds 500 characters")
         void createList_descriptionTooLong_returns400() throws Exception {
             String longDescription = "a".repeat(501);
-            ItemListRequest request = new ItemListRequest("Valid Name", longDescription, "Category", null);
+            ItemListRequest request = new ItemListRequest("Valid Name", longDescription, "Category", null, null);
 
             mockMvc.perform(post("/api/v1/lists")
                             .contentType(MediaType.APPLICATION_JSON)
@@ -322,7 +322,7 @@ class ItemListControllerTest {
         @DisplayName("should return 400 when category exceeds 100 characters")
         void createList_categoryTooLong_returns400() throws Exception {
             String longCategory = "a".repeat(101);
-            ItemListRequest request = new ItemListRequest("Valid Name", "Description", longCategory, null);
+            ItemListRequest request = new ItemListRequest("Valid Name", "Description", longCategory, null, null);
 
             mockMvc.perform(post("/api/v1/lists")
                             .contentType(MediaType.APPLICATION_JSON)
@@ -336,7 +336,7 @@ class ItemListControllerTest {
         @Test
         @DisplayName("should create list with only required fields")
         void createList_onlyRequiredFields_returns201() throws Exception {
-            ItemListRequest request = new ItemListRequest("Minimal List", null, null, null);
+            ItemListRequest request = new ItemListRequest("Minimal List", null, null, null, null);
             when(itemListService.createList(any(ItemListRequest.class))).thenReturn(testList);
 
             mockMvc.perform(post("/api/v1/lists")
@@ -354,7 +354,7 @@ class ItemListControllerTest {
         @Test
         @DisplayName("should update existing list")
         void updateList_existingId_returnsUpdatedList() throws Exception {
-            ItemListRequest request = new ItemListRequest("Updated List", "Updated Desc", "Updated Cat", null);
+            ItemListRequest request = new ItemListRequest("Updated List", "Updated Desc", "Updated Cat", null, null);
 
             ItemList updatedList = new ItemList();
             updatedList.setId(testListId);
@@ -382,7 +382,7 @@ class ItemListControllerTest {
         @DisplayName("should return 404 when updating non-existing list")
         void updateList_nonExistingId_returns404() throws Exception {
             UUID nonExistingId = UUID.randomUUID();
-            ItemListRequest request = new ItemListRequest("Updated List", "Updated Desc", "Updated Cat", null);
+            ItemListRequest request = new ItemListRequest("Updated List", "Updated Desc", "Updated Cat", null, null);
 
             when(itemListService.updateList(eq(nonExistingId), any(ItemListRequest.class)))
                     .thenThrow(new ItemListNotFoundException(nonExistingId));
@@ -399,7 +399,7 @@ class ItemListControllerTest {
         @Test
         @DisplayName("should return 400 when updating with blank name")
         void updateList_blankName_returns400() throws Exception {
-            ItemListRequest request = new ItemListRequest("", "Description", "Category", null);
+            ItemListRequest request = new ItemListRequest("", "Description", "Category", null, null);
 
             mockMvc.perform(patch("/api/v1/lists/{id}", testListId)
                             .contentType(MediaType.APPLICATION_JSON)

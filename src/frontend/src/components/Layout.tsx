@@ -15,6 +15,8 @@ import {
 import type { LucideIcon } from 'lucide-react';
 import FocusTrap from 'focus-trap-react';
 import { UserMenu } from './UserMenu';
+import { WorkspaceSwitcher } from './WorkspaceSwitcher';
+import { InvitationBanner } from './InvitationBanner';
 import { useAuth } from '../contexts/AuthContext';
 import { cn } from '@/lib/utils';
 
@@ -154,6 +156,9 @@ export default function Layout({ children }: LayoutProps) {
             </div>
           </div>
 
+          {/* Workspace Switcher */}
+          <WorkspaceSwitcher />
+
           {/* Main navigation */}
           <nav
             aria-label="Navigation principale"
@@ -200,7 +205,10 @@ export default function Layout({ children }: LayoutProps) {
       </FocusTrap>
 
       <div className="flex-1 flex flex-col">
-        <main className="flex-1 p-4 md:p-8 lg:px-10">{children}</main>
+        <main className="flex-1 p-4 md:p-8 lg:px-10">
+          <InvitationBanner />
+          {children}
+        </main>
         <footer className="border-t px-4 py-4 md:px-8">
           <nav
             aria-label="Liens légaux"

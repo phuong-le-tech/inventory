@@ -53,6 +53,8 @@ export interface ItemList {
   category?: string;
   itemCount?: number;
   customFieldDefinitions?: CustomFieldDefinition[];
+  workspaceId?: string;
+  workspaceName?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -66,6 +68,7 @@ export interface ItemListFormData {
   description?: string;
   category?: string;
   customFieldDefinitions?: CustomFieldDefinition[];
+  workspaceId?: string;
 }
 
 export interface Item {
@@ -171,6 +174,7 @@ export interface ItemListSearchParams {
   sortBy?: string;
   sortDir?: "asc" | "desc";
   search?: string;
+  workspaceId?: string;
 }
 
 export const STATUS_OPTIONS = [

@@ -22,11 +22,20 @@ public class ItemSpecification {
 
     @NonNull
     public static Specification<Item> withCriteria(ItemSearchCriteria criteria, @Nullable UUID userId) {
+        return withCriteria(criteria, userId, null);
+    }
+
+    @NonNull
+    public static Specification<Item> withCriteria(ItemSearchCriteria criteria, @Nullable UUID userId,
+                                                    @Nullable java.util.Collection<UUID> workspaceIds) {
         return (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
 
-            // User-scope filter: non-admin users only see their own items
-            if (userId != null) {
+            // Workspace-scope filter: filter by accessible workspaces
+            if (workspaceIds != null && !workspaceIds.isEmpty()) {
+                predicates.add(root.get("itemList").get("workspace").get("id").in(workspaceIds));
+            } else if (userId != null) {
+                // Fallback: user-scope filter for backward compatibility
                 predicates.add(cb.equal(root.get("itemList").get("user").get("id"), userId));
             }
 

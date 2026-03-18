@@ -47,6 +47,12 @@ public class ItemList {
     @EqualsAndHashCode.Exclude
     private User user;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "workspace_id", nullable = false)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private Workspace workspace;
+
     @OneToMany(mappedBy = "itemList", cascade = CascadeType.ALL, orphanRemoval = true)
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
