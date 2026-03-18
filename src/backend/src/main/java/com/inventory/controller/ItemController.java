@@ -28,6 +28,8 @@ import com.inventory.security.CustomUserDetails;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
 import jakarta.validation.Validator;
+import jakarta.validation.constraints.Size;
+import org.springframework.validation.annotation.Validated;
 
 import java.io.IOException;
 import java.util.Objects;
@@ -39,6 +41,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 
 @RestController
 @RequestMapping("/api/v1/items")
+@Validated
 public class ItemController {
 
     private static final Set<String> ALLOWED_SORT_FIELDS = Set.of("createdAt", "updatedAt", "name", "status", "stock");
@@ -88,6 +91,14 @@ public class ItemController {
         return itemService.getItemById(id)
                 .map(item -> ResponseEntity.ok(ItemResponse.fromEntity(item, imageStorageService)))
                 .orElseThrow(() -> new ItemNotFoundException(id));
+    }
+
+    @GetMapping("/barcode/{code:.+}")
+    public ResponseEntity<ItemResponse> getItemByBarcode(
+            @PathVariable @NonNull @Size(max = 255, message = "Barcode must not exceed 255 characters") String code) {
+        return itemService.getItemByBarcode(code)
+                .map(item -> ResponseEntity.ok(ItemResponse.fromEntity(item, imageStorageService)))
+                .orElse(ResponseEntity.notFound().build());
     }
 
     @GetMapping("/{id}/image")

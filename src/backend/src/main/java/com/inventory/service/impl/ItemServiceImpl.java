@@ -4,26 +4,29 @@ import com.inventory.dto.request.ItemRequest;
 import com.inventory.dto.request.ItemSearchCriteria;
 import com.inventory.dto.response.DashboardStats;
 import com.inventory.enums.ItemStatus;
+import com.inventory.enums.WorkspaceRole;
 import com.inventory.exception.FileValidationException;
 import com.inventory.exception.ItemListNotFoundException;
 import com.inventory.exception.ItemNotFoundException;
-import com.inventory.exception.UnauthorizedException;
+import com.inventory.exception.WorkspaceAccessDeniedException;
 import com.inventory.model.Item;
 import com.inventory.model.ItemList;
+import com.inventory.model.WorkspaceMember;
 import com.inventory.repository.ItemListRepository;
 import com.inventory.repository.ItemRepository;
 import com.inventory.repository.specification.ItemSpecification;
 import com.inventory.security.SecurityUtils;
+import com.inventory.security.WorkspaceAccessUtils;
 import com.inventory.service.CustomFieldValidator;
 import com.inventory.service.IItemService;
 import com.inventory.service.ImageProcessingService;
 import com.inventory.service.ImageStorageService;
 
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.lang.NonNull;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -50,16 +53,19 @@ public class ItemServiceImpl implements IItemService {
     private final ItemListRepository itemListRepository;
     private final CustomFieldValidator customFieldValidator;
     private final SecurityUtils securityUtils;
+    private final WorkspaceAccessUtils workspaceAccessUtils;
     private final ImageStorageService imageStorageService;
     private final ImageProcessingService imageProcessingService;
 
     public ItemServiceImpl(ItemRepository itemRepository, ItemListRepository itemListRepository,
                            CustomFieldValidator customFieldValidator, SecurityUtils securityUtils,
+                           WorkspaceAccessUtils workspaceAccessUtils,
                            ImageStorageService imageStorageService, ImageProcessingService imageProcessingService) {
         this.itemRepository = itemRepository;
         this.itemListRepository = itemListRepository;
         this.customFieldValidator = customFieldValidator;
         this.securityUtils = securityUtils;
+        this.workspaceAccessUtils = workspaceAccessUtils;
         this.imageStorageService = imageStorageService;
         this.imageProcessingService = imageProcessingService;
     }
@@ -68,12 +74,11 @@ public class ItemServiceImpl implements IItemService {
     @Transactional(readOnly = true)
     public Page<Item> getAllItems(@NonNull Pageable pageable,
         @NonNull ItemSearchCriteria criteria) {
-        UUID userId = null;
-        if (!securityUtils.isAdmin()) {
-            userId = securityUtils.getCurrentUserId()
-                    .orElseThrow(() -> new UnauthorizedException("Not authenticated"));
+        if (securityUtils.isAdmin()) {
+            return itemRepository.findAll(ItemSpecification.withCriteria(criteria, null), pageable);
         }
-        return itemRepository.findAll(ItemSpecification.withCriteria(criteria, userId), pageable);
+        List<UUID> workspaceIds = workspaceAccessUtils.getAccessibleWorkspaceIds();
+        return itemRepository.findAll(ItemSpecification.withCriteria(criteria, null, workspaceIds), pageable);
     }
 
     @Override
@@ -81,6 +86,22 @@ public class ItemServiceImpl implements IItemService {
     public Optional<Item> getItemById(@NonNull UUID id) {
         return itemRepository.findById(id)
                 .map(this::checkItemOwnership);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<Item> getItemByBarcode(@NonNull String barcode) {
+        if (securityUtils.isAdmin()) {
+            return itemRepository.findAll(ItemSpecification.withCriteria(
+                    new ItemSearchCriteria(null, null, null, barcode), null),
+                    org.springframework.data.domain.Pageable.ofSize(1))
+                    .stream().findFirst();
+        }
+        List<UUID> workspaceIds = workspaceAccessUtils.getAccessibleWorkspaceIds();
+        if (workspaceIds.isEmpty()) {
+            return Optional.empty();
+        }
+        return itemRepository.findByBarcodeAndWorkspaceIds(barcode, workspaceIds);
     }
 
     @Override
@@ -97,6 +118,7 @@ public class ItemServiceImpl implements IItemService {
         item.setItemList(itemList);
         item.setStatus(request.status() != null ? request.status() : ItemStatus.AVAILABLE);
         item.setStock(request.stock() != null ? request.stock() : 0);
+        item.setBarcode(request.barcode());
         item.setCustomFieldValues(request.customFieldValues());
 
         // Save first to get the generated ID
@@ -136,6 +158,7 @@ public class ItemServiceImpl implements IItemService {
         item.setItemList(itemList);
         item.setStatus(request.status() != null ? request.status() : item.getStatus());
         item.setStock(request.stock() != null ? request.stock() : item.getStock());
+        item.setBarcode(request.barcode());
         item.setCustomFieldValues(request.customFieldValues());
 
         if (image != null && !image.isEmpty()) {
@@ -168,6 +191,15 @@ public class ItemServiceImpl implements IItemService {
         Item item = itemRepository.findById(id)
                 .orElseThrow(() -> new ItemNotFoundException(id));
         checkItemOwnership(item);
+
+        // Verify EDITOR or OWNER role for write operations
+        if (!securityUtils.isAdmin()) {
+            WorkspaceMember member = workspaceAccessUtils.requireMembership(item.getItemList().getWorkspace().getId());
+            if (member.getRole() == WorkspaceRole.VIEWER) {
+                throw new WorkspaceAccessDeniedException("Viewers cannot delete items");
+            }
+        }
+
         String imageKey = item.getImageKey();
         itemRepository.delete(item);
         if (imageKey != null) {
@@ -187,15 +219,17 @@ public class ItemServiceImpl implements IItemService {
                     itemRepository.getListsOverview(),
                     itemRepository.findTop5ByOrderByUpdatedAtDesc());
         }
-        UUID userId = securityUtils.getCurrentUserId()
-                .orElseThrow(() -> new UnauthorizedException("Not authenticated"));
+        List<UUID> workspaceIds = workspaceAccessUtils.getAccessibleWorkspaceIds();
+        if (workspaceIds.isEmpty()) {
+            return buildStats(0L, 0L, List.of(), List.of(), List.of(), List.of());
+        }
         return buildStats(
-                itemRepository.countByUserId(userId),
-                itemRepository.sumStockByUserId(userId),
-                itemRepository.countByStatusAndUserId(userId),
-                itemRepository.countByCategoryAndUserId(userId),
-                itemRepository.getListsOverviewByUserId(userId),
-                itemRepository.findTop5ByUserIdOrderByUpdatedAtDesc(userId));
+                itemRepository.countByWorkspaceIds(workspaceIds),
+                itemRepository.sumStockByWorkspaceIds(workspaceIds),
+                itemRepository.countByStatusAndWorkspaceIds(workspaceIds),
+                itemRepository.countByCategoryAndWorkspaceIds(workspaceIds),
+                itemRepository.getListsOverviewByWorkspaceIds(workspaceIds),
+                itemRepository.findTop5ByWorkspaceIdsOrderByUpdatedAtDesc(workspaceIds));
     }
 
     private DashboardStats buildStats(long totalItems, long totalQuantity,
@@ -215,7 +249,6 @@ public class ItemServiceImpl implements IItemService {
                         row -> row[0] != null ? (String) row[0] : "Uncategorized",
                         row -> (Long) row[1]));
 
-        // Query returns: [listName (String), itemsCount (Long), totalQuantity (Long)]
         List<DashboardStats.ListOverviewDto> listsOverview = listsOverviewRows.stream()
                 .map(row -> new DashboardStats.ListOverviewDto(
                         (String) row[0],
@@ -240,9 +273,9 @@ public class ItemServiceImpl implements IItemService {
 
     private Item checkItemOwnership(Item item) {
         if (!securityUtils.isAdmin()) {
-            UUID userId = securityUtils.getCurrentUserId()
-                    .orElseThrow(() -> new UnauthorizedException("Not authenticated"));
-            if (!item.getItemList().getUser().getId().equals(userId)) {
+            List<UUID> workspaceIds = workspaceAccessUtils.getAccessibleWorkspaceIds();
+            UUID itemWorkspaceId = item.getItemList().getWorkspace().getId();
+            if (!workspaceIds.contains(itemWorkspaceId)) {
                 throw new ItemNotFoundException(item.getId());
             }
         }
@@ -253,10 +286,11 @@ public class ItemServiceImpl implements IItemService {
         ItemList itemList = itemListRepository.findById(listId)
                 .orElseThrow(() -> new ItemListNotFoundException(listId));
         if (!securityUtils.isAdmin()) {
-            UUID userId = securityUtils.getCurrentUserId()
-                    .orElseThrow(() -> new UnauthorizedException("Not authenticated"));
-            if (!itemList.getUser().getId().equals(userId)) {
-                throw new ItemListNotFoundException(listId);
+            // Verify workspace membership
+            WorkspaceMember member = workspaceAccessUtils.requireMembership(itemList.getWorkspace().getId());
+            // Verify write access
+            if (member.getRole() == WorkspaceRole.VIEWER) {
+                throw new WorkspaceAccessDeniedException("Viewers cannot create or update items");
             }
         }
         return itemList;

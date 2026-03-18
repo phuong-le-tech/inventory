@@ -6,6 +6,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
 import java.util.List;
+import java.util.UUID;
 
 public record ItemListRequest(
 
@@ -21,5 +22,7 @@ public record ItemListRequest(
 
         @Valid
         @Size(max = 20, message = "A list can have at most 20 custom fields")
-        List<CustomFieldDefinition> customFieldDefinitions
+        List<CustomFieldDefinition> customFieldDefinitions,
+
+        UUID workspaceId
 ) {}

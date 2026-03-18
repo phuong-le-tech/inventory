@@ -43,7 +43,8 @@ public class ItemListController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "createdAt") String sortBy,
-            @RequestParam(defaultValue = "desc") String sortDir
+            @RequestParam(defaultValue = "desc") String sortDir,
+            @RequestParam(required = false) UUID workspaceId
     ) {
         size = Math.min(Math.max(size, 1), 100);
         if (!ALLOWED_SORT_FIELDS.contains(sortBy)) {
@@ -54,7 +55,7 @@ public class ItemListController {
                 : Sort.by(sortBy).descending();
         Pageable pageable = PageRequest.of(page, size, sort);
 
-        Page<ItemList> listsPage = itemListService.getAllLists(pageable);
+        Page<ItemList> listsPage = itemListService.getAllLists(pageable, workspaceId);
         Page<ItemListResponse> responsePage = listsPage.map(ItemListResponse::fromEntityWithoutItems);
 
         return ResponseEntity.ok(PageResponse.from(responsePage));

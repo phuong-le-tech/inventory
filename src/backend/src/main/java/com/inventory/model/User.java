@@ -57,6 +57,11 @@ public class User {
     @EqualsAndHashCode.Exclude
     private List<ItemList> itemLists = new ArrayList<>();
 
+    @OneToMany(mappedBy = "owner", cascade = CascadeType.ALL, orphanRemoval = true)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private List<Workspace> ownedWorkspaces = new ArrayList<>();
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 

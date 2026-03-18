@@ -7,7 +7,7 @@ A full-stack inventory management application that lets users organize items int
 - **Authentication** — Email/password login with JWT tokens stored in HTTP-only cookies, optional Google OAuth2, email verification, password reset
 - **Dashboard** — Overview with inventory statistics (total items, status breakdown, category counts)
 - **Item Lists** — Create and manage custom lists to organize inventory, with custom field definitions per list
-- **Items** — Add, edit, and delete items with image upload, status tracking, and search/filtering
+- **Items** — Add, edit, and delete items with image upload, status tracking, search/filtering, and barcode/QR code scanning via device camera
 - **Admin Panel** — User management for admin-role users
 - **Responsive UI** — Sidebar navigation with a modern, animated interface
 

@@ -13,6 +13,13 @@ export const queryKeys = {
     list: (params: object) => ['items', 'list', params] as const,
     detail: (id: string) => ['items', 'detail', id] as const,
   },
+  workspaces: {
+    all: ['workspaces'] as const,
+    list: () => ['workspaces', 'list'] as const,
+    detail: (id: string) => ['workspaces', 'detail', id] as const,
+    members: (id: string) => ['workspaces', 'members', id] as const,
+    pendingInvitations: () => ['workspaces', 'invitations', 'pending'] as const,
+  },
   admin: {
     users: (params: object) => ['admin', 'users', params] as const,
     userDetail: (id: string) => ['admin', 'users', 'detail', id] as const,

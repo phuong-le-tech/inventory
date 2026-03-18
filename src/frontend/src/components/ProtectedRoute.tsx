@@ -1,5 +1,6 @@
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { WorkspaceProvider } from '../contexts/WorkspaceContext';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -29,5 +30,5 @@ export function ProtectedRoute({ children, adminOnly = false }: ProtectedRoutePr
     return <Navigate to="/dashboard" replace />;
   }
 
-  return <>{children}</>;
+  return <WorkspaceProvider>{children}</WorkspaceProvider>;
 }

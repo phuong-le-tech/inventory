@@ -23,6 +23,8 @@ public interface IItemService {
 
     Optional<Item> getItemById(@NonNull UUID id);
 
+    Optional<Item> getItemByBarcode(@NonNull String barcode);
+
     DashboardStats getDashboardStats();
 
     // Write operations

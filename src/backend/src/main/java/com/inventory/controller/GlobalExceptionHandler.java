@@ -10,9 +10,13 @@ import com.inventory.exception.ImageProcessingException;
 import com.inventory.exception.ImageStorageException;
 import com.inventory.exception.ItemListNotFoundException;
 import com.inventory.exception.ItemNotFoundException;
+import com.inventory.exception.InvitationNotFoundException;
 import com.inventory.exception.ListLimitExceededException;
 import com.inventory.exception.RateLimitExceededException;
 import com.inventory.exception.UnauthorizedException;
+import com.inventory.exception.WorkspaceAccessDeniedException;
+import com.inventory.exception.WorkspaceLimitExceededException;
+import com.inventory.exception.WorkspaceNotFoundException;
 import com.inventory.exception.UserAlreadyExistsException;
 import com.inventory.exception.UserNotFoundException;
 import lombok.extern.slf4j.Slf4j;
@@ -117,6 +121,26 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ListLimitExceededException.class)
     public ResponseEntity<ApiErrorResponse> handleListLimitExceeded(ListLimitExceededException e) {
         return buildErrorResponse(HttpStatus.FORBIDDEN, e.getMessage());
+    }
+
+    @ExceptionHandler(WorkspaceNotFoundException.class)
+    public ResponseEntity<ApiErrorResponse> handleWorkspaceNotFound(WorkspaceNotFoundException e) {
+        return buildErrorResponse(HttpStatus.NOT_FOUND, e.getMessage());
+    }
+
+    @ExceptionHandler(WorkspaceAccessDeniedException.class)
+    public ResponseEntity<ApiErrorResponse> handleWorkspaceAccessDenied(WorkspaceAccessDeniedException e) {
+        return buildErrorResponse(HttpStatus.FORBIDDEN, e.getMessage());
+    }
+
+    @ExceptionHandler(WorkspaceLimitExceededException.class)
+    public ResponseEntity<ApiErrorResponse> handleWorkspaceLimitExceeded(WorkspaceLimitExceededException e) {
+        return buildErrorResponse(HttpStatus.PAYMENT_REQUIRED, e.getMessage());
+    }
+
+    @ExceptionHandler(InvitationNotFoundException.class)
+    public ResponseEntity<ApiErrorResponse> handleInvitationNotFound(InvitationNotFoundException e) {
+        return buildErrorResponse(HttpStatus.NOT_FOUND, e.getMessage());
     }
 
     @ExceptionHandler(ExportLimitExceededException.class)

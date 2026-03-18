@@ -17,6 +17,8 @@ public record ItemListResponse(
         int itemCount,
         List<ItemResponse> items,
         List<CustomFieldDefinition> customFieldDefinitions,
+        UUID workspaceId,
+        String workspaceName,
         LocalDateTime createdAt,
         LocalDateTime updatedAt
 ) {
@@ -41,6 +43,8 @@ public record ItemListResponse(
                 itemList.getCustomFieldDefinitions() != null
                         ? itemList.getCustomFieldDefinitions()
                         : List.of(),
+                itemList.getWorkspace() != null ? itemList.getWorkspace().getId() : null,
+                itemList.getWorkspace() != null ? itemList.getWorkspace().getName() : null,
                 itemList.getCreatedAt(),
                 itemList.getUpdatedAt()
         );
@@ -57,6 +61,8 @@ public record ItemListResponse(
                 itemList.getCustomFieldDefinitions() != null
                         ? itemList.getCustomFieldDefinitions()
                         : List.of(),
+                itemList.getWorkspace() != null ? itemList.getWorkspace().getId() : null,
+                itemList.getWorkspace() != null ? itemList.getWorkspace().getName() : null,
                 itemList.getCreatedAt(),
                 itemList.getUpdatedAt()
         );

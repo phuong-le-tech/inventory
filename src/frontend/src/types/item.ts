@@ -53,6 +53,8 @@ export interface ItemList {
   category?: string;
   itemCount?: number;
   customFieldDefinitions?: CustomFieldDefinition[];
+  workspaceId?: string;
+  workspaceName?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -66,6 +68,7 @@ export interface ItemListFormData {
   description?: string;
   category?: string;
   customFieldDefinitions?: CustomFieldDefinition[];
+  workspaceId?: string;
 }
 
 export interface Item {
@@ -74,6 +77,7 @@ export interface Item {
   itemListId: string;
   status: ItemStatus;
   stock: number;
+  barcode?: string | null;
   imageUrl?: string | null;
   customFieldValues?: Record<string, unknown>;
   createdAt: string;
@@ -85,6 +89,7 @@ export interface ItemFormData {
   itemListId: string;
   status: ItemStatus;
   stock: number;
+  barcode?: string;
   customFieldValues?: Record<string, unknown>;
 }
 
@@ -142,6 +147,7 @@ export interface AdminItem {
   name: string;
   status: ItemStatus;
   stock: number;
+  barcode?: string | null;
   imageUrl?: string | null;
   listId: string;
   listName: string;
@@ -168,6 +174,7 @@ export interface ItemListSearchParams {
   sortBy?: string;
   sortDir?: "asc" | "desc";
   search?: string;
+  workspaceId?: string;
 }
 
 export const STATUS_OPTIONS = [

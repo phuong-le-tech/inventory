@@ -4,17 +4,24 @@ import com.inventory.dto.CustomFieldDefinition;
 import com.inventory.dto.request.ItemListRequest;
 import com.inventory.dto.response.CsvExportResult;
 import com.inventory.enums.Role;
+import com.inventory.enums.WorkspaceRole;
 import com.inventory.exception.ExportLimitExceededException;
 import com.inventory.exception.ItemListNotFoundException;
 import com.inventory.exception.ListLimitExceededException;
 import com.inventory.exception.UnauthorizedException;
+import com.inventory.exception.WorkspaceAccessDeniedException;
+import com.inventory.exception.WorkspaceNotFoundException;
 import com.inventory.model.Item;
 import com.inventory.model.ItemList;
 import com.inventory.model.User;
+import com.inventory.model.Workspace;
+import com.inventory.model.WorkspaceMember;
 import com.inventory.repository.ItemListRepository;
 import com.inventory.repository.ItemRepository;
 import com.inventory.repository.UserRepository;
+import com.inventory.repository.WorkspaceRepository;
 import com.inventory.security.SecurityUtils;
+import com.inventory.security.WorkspaceAccessUtils;
 import com.inventory.service.CustomFieldValidator;
 import com.inventory.service.IItemListService;
 import lombok.RequiredArgsConstructor;
@@ -42,7 +49,9 @@ public class ItemListServiceImpl implements IItemListService {
     private final ItemListRepository itemListRepository;
     private final ItemRepository itemRepository;
     private final UserRepository userRepository;
+    private final WorkspaceRepository workspaceRepository;
     private final SecurityUtils securityUtils;
+    private final WorkspaceAccessUtils workspaceAccessUtils;
     private final CustomFieldValidator customFieldValidator;
 
     private @NonNull UUID requireCurrentUserId() {
@@ -52,11 +61,22 @@ public class ItemListServiceImpl implements IItemListService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<ItemList> getAllLists(@NonNull Pageable pageable) {
+    public Page<ItemList> getAllLists(@NonNull Pageable pageable, UUID workspaceId) {
         if (securityUtils.isAdmin()) {
+            if (workspaceId != null) {
+                return itemListRepository.findByWorkspaceId(workspaceId, pageable);
+            }
             return itemListRepository.findAll(pageable);
         }
-        return itemListRepository.findByUserId(requireCurrentUserId(), pageable);
+
+        if (workspaceId == null) {
+            // Fallback: return lists from all accessible workspaces via user_id
+            return itemListRepository.findByUserId(requireCurrentUserId(), pageable);
+        }
+
+        // Verify membership
+        workspaceAccessUtils.requireMembership(workspaceId);
+        return itemListRepository.findByWorkspaceId(workspaceId, pageable);
     }
 
     @Override
@@ -66,7 +86,10 @@ public class ItemListServiceImpl implements IItemListService {
             return itemListRepository.findById(id)
                     .orElseThrow(() -> new ItemListNotFoundException(id));
         }
-        return itemListRepository.findByIdAndUserId(id, requireCurrentUserId())
+
+        // Find the list and check workspace membership
+        List<UUID> workspaceIds = workspaceAccessUtils.getAccessibleWorkspaceIds();
+        return itemListRepository.findByIdAndWorkspaceIdIn(id, workspaceIds)
                 .orElseThrow(() -> new ItemListNotFoundException(id));
     }
 
@@ -79,6 +102,24 @@ public class ItemListServiceImpl implements IItemListService {
         User user = userRepository.findByIdWithLock(userId)
                 .orElseThrow(() -> new UnauthorizedException("User not found"));
 
+        // Resolve workspace (lock the row to serialize concurrent list creation)
+        Workspace workspace;
+        if (request.workspaceId() != null) {
+            workspace = workspaceRepository.findByIdWithLock(request.workspaceId())
+                    .orElseThrow(() -> new WorkspaceNotFoundException(request.workspaceId()));
+            // Verify OWNER or EDITOR role
+            WorkspaceMember member = workspaceAccessUtils.requireMembership(workspace.getId());
+            if (member.getRole() == WorkspaceRole.VIEWER) {
+                throw new WorkspaceAccessDeniedException("Viewers cannot create lists");
+            }
+        } else {
+            // Default workspace — user row is already locked above, which serializes
+            // creation for the user's own default workspace
+            workspace = workspaceRepository.findByOwnerIdAndIsDefaultTrue(userId)
+                    .orElseThrow(() -> new UnauthorizedException("No default workspace found"));
+        }
+
+        // Free-tier limit: count ALL lists owned by the user (across all workspaces)
         if (user.getRole() == Role.USER) {
             long count = itemListRepository.countByUserId(userId);
             if (count >= 5) {
@@ -95,6 +136,7 @@ public class ItemListServiceImpl implements IItemListService {
         itemList.setCategory(request.category());
         itemList.setCustomFieldDefinitions(request.customFieldDefinitions());
         itemList.setUser(user);
+        itemList.setWorkspace(workspace);
         return itemListRepository.save(itemList);
     }
 
@@ -104,6 +146,15 @@ public class ItemListServiceImpl implements IItemListService {
         customFieldValidator.validateDefinitionNames(request.customFieldDefinitions());
 
         ItemList itemList = getListById(id);
+
+        // Verify EDITOR or OWNER role
+        if (!securityUtils.isAdmin()) {
+            WorkspaceMember member = workspaceAccessUtils.requireMembership(itemList.getWorkspace().getId());
+            if (member.getRole() == WorkspaceRole.VIEWER) {
+                throw new WorkspaceAccessDeniedException("Viewers cannot update lists");
+            }
+        }
+
         itemList.setName(request.name());
         itemList.setDescription(request.description());
         itemList.setCategory(request.category());
@@ -121,15 +172,19 @@ public class ItemListServiceImpl implements IItemListService {
             itemListRepository.deleteById(id);
             return;
         }
-        if (!itemListRepository.existsByIdAndUserId(id, requireCurrentUserId())) {
-            throw new ItemListNotFoundException(id);
-        }
-        itemListRepository.deleteById(id);
+
+        ItemList itemList = getListById(id);
+
+        // Only workspace OWNER can delete lists
+        workspaceAccessUtils.requireRole(itemList.getWorkspace().getId(), WorkspaceRole.OWNER);
+
+        itemListRepository.delete(itemList);
     }
 
     @Override
     @Transactional(readOnly = true)
     public CsvExportResult exportListAsCsv(@NonNull UUID id) {
+        // getListById already checks workspace membership (any role can export)
         ItemList itemList = getListById(id);
 
         long itemCount = itemRepository.countByItemListId(id);

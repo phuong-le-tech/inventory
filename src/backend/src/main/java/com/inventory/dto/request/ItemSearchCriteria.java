@@ -10,5 +10,8 @@ public record ItemSearchCriteria(
         @Size(max = 255, message = "Search term must not exceed 255 characters")
         String search,
         UUID itemListId,
-        ItemStatus status) {
+        ItemStatus status,
+
+        @Size(max = 255, message = "Barcode must not exceed 255 characters")
+        String barcode) {
 }

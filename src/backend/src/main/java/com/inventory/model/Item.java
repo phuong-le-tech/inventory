@@ -51,6 +51,9 @@ public class Item {
     @Column(name = "custom_field_values", columnDefinition = "json")
     private Map<String, Object> customFieldValues;
 
+    @Column(length = 255)
+    private String barcode;
+
     @Column(name = "image_key", length = 500)
     private String imageKey;
 

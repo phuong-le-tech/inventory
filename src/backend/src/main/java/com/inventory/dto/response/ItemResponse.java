@@ -14,6 +14,7 @@ public record ItemResponse(
         UUID itemListId,
         String status,
         Integer stock,
+        String barcode,
         String imageUrl,
         Map<String, Object> customFieldValues,
         LocalDateTime createdAt,
@@ -26,6 +27,7 @@ public record ItemResponse(
                 item.getItemList() != null ? item.getItemList().getId() : null,
                 item.getStatus() != null ? item.getStatus().name() : null,
                 item.getStock(),
+                item.getBarcode(),
                 item.getImageKey() != null
                         ? imageStorageService.getPresignedUrl(item.getImageKey())
                         : null,

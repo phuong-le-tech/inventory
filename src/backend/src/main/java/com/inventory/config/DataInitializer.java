@@ -5,8 +5,11 @@ import com.inventory.factory.fixture.ItemListFixture;
 import com.inventory.factory.fixture.UserFixture;
 import com.inventory.model.ItemList;
 import com.inventory.model.User;
+import com.inventory.model.Workspace;
 import com.inventory.repository.ItemListRepository;
 import com.inventory.repository.UserRepository;
+import com.inventory.repository.WorkspaceRepository;
+import com.inventory.service.IWorkspaceService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
@@ -15,6 +18,7 @@ import org.springframework.core.env.Environment;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Arrays;
 import java.util.List;
@@ -28,21 +32,29 @@ public class DataInitializer implements CommandLineRunner {
 
     private final UserRepository userRepository;
     private final ItemListRepository itemListRepository;
+    private final WorkspaceRepository workspaceRepository;
+    private final IWorkspaceService workspaceService;
     private final PasswordEncoder passwordEncoder;
     private final Environment environment;
 
     @Override
+    @Transactional
     public void run(String... args) {
-        User admin = userRepository.findByEmail("admin@example.com").orElse(null);
+        User admin = userRepository.findByEmail("admin@example.com")
+                .orElseGet(() -> {
+                    User created = userRepository.save(Objects.requireNonNull(UserFixture.createAdmin(passwordEncoder)));
+                    log.info("Created default admin user: admin@example.com / admin123");
+                    return created;
+                });
 
-        if (admin == null) {
-            admin = userRepository.save(Objects.requireNonNull(UserFixture.createAdmin(passwordEncoder)));
-            log.info("Created default admin user: admin@example.com / admin123");
-        }
+        // Ensure admin has a default workspace
+        Workspace defaultWorkspace = workspaceRepository.findByOwnerIdAndIsDefaultTrue(admin.getId())
+                .orElseGet(() -> workspaceService.createDefaultWorkspace(admin));
 
         if (isDevProfile() && itemListRepository.findByUserId(Objects.requireNonNull(admin.getId(), "Admin not found"), Pageable.unpaged()).isEmpty()) {
             List<ItemList> lists = ItemListFixture.createAll(admin);
             for (ItemList list : lists) {
+                list.setWorkspace(defaultWorkspace);
                 ItemFixture.createItemsFor(list);
             }
             itemListRepository.saveAll(Objects.requireNonNull(lists, "Lists not found"));

@@ -1,3 +1,4 @@
+import axios from 'axios';
 import http from './http';
 import {
   Item,
@@ -90,6 +91,20 @@ export const itemsApi = {
 
   delete: async (id: string): Promise<void> => {
     await http.delete(`/items/${id}`);
+  },
+
+  getByBarcode: async (barcode: string, signal?: AbortSignal): Promise<Item | null> => {
+    try {
+      const response = await http.get<Item>(`/items/barcode/${encodeURIComponent(barcode)}`, {
+        signal,
+      });
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response?.status === 404) {
+        return null;
+      }
+      throw error;
+    }
   },
 };
 

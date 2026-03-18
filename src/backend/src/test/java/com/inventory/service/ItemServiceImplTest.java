@@ -4,14 +4,18 @@ import com.inventory.dto.request.ItemRequest;
 import com.inventory.dto.request.ItemSearchCriteria;
 import com.inventory.dto.response.DashboardStats;
 import com.inventory.enums.ItemStatus;
+import com.inventory.enums.WorkspaceRole;
 import com.inventory.exception.ItemListNotFoundException;
 import com.inventory.exception.ItemNotFoundException;
 import com.inventory.model.Item;
 import com.inventory.model.ItemList;
 import com.inventory.model.User;
+import com.inventory.model.Workspace;
+import com.inventory.model.WorkspaceMember;
 import com.inventory.repository.ItemListRepository;
 import com.inventory.repository.ItemRepository;
 import com.inventory.security.SecurityUtils;
+import com.inventory.security.WorkspaceAccessUtils;
 import com.inventory.service.impl.ItemServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -62,6 +66,9 @@ class ItemServiceImplTest {
     private SecurityUtils securityUtils;
 
     @Mock
+    private WorkspaceAccessUtils workspaceAccessUtils;
+
+    @Mock
     private ImageStorageService imageStorageService;
 
     @Mock
@@ -72,25 +79,33 @@ class ItemServiceImplTest {
 
     private Item testItem;
     private ItemList testList;
+    private Workspace testWorkspace;
     private UUID testId;
     private UUID testListId;
     private UUID testUserId;
+    private UUID testWorkspaceId;
 
     @BeforeEach
     void setUp() {
         testId = UUID.randomUUID();
         testListId = UUID.randomUUID();
         testUserId = UUID.randomUUID();
+        testWorkspaceId = UUID.randomUUID();
 
         User testUser = new User();
         testUser.setId(testUserId);
         testUser.setEmail("test@example.com");
+
+        testWorkspace = new Workspace();
+        testWorkspace.setId(testWorkspaceId);
+        testWorkspace.setName("Test Workspace");
 
         testList = new ItemList();
         testList.setId(testListId);
         testList.setName("Test List");
         testList.setCategory("Electronics");
         testList.setUser(testUser);
+        testList.setWorkspace(testWorkspace);
 
         testItem = new Item();
         testItem.setId(testId);
@@ -108,11 +123,11 @@ class ItemServiceImplTest {
         @DisplayName("should return page of items")
         void getAllItems_returnsPageOfItems() {
             Pageable pageable = PageRequest.of(0, 10);
-            ItemSearchCriteria criteria = new ItemSearchCriteria(null, null, null);
+            ItemSearchCriteria criteria = new ItemSearchCriteria(null, null, null, null);
             Page<Item> expectedPage = new PageImpl<>(Objects.requireNonNull(List.of(testItem), "List of items not found"));
 
             when(securityUtils.isAdmin()).thenReturn(false);
-            when(securityUtils.getCurrentUserId()).thenReturn(Optional.of(testUserId));
+            when(workspaceAccessUtils.getAccessibleWorkspaceIds()).thenReturn(List.of(testWorkspaceId));
             when(itemRepository.findAll(any(Specification.class), eq(pageable))).thenReturn(expectedPage);
 
             Page<Item> result = itemService.getAllItems(pageable, criteria);
@@ -126,7 +141,7 @@ class ItemServiceImplTest {
         @DisplayName("should return all items for admin without user filter")
         void getAllItems_admin_returnsAllItems() {
             Pageable pageable = PageRequest.of(0, 10);
-            ItemSearchCriteria criteria = new ItemSearchCriteria(null, null, null);
+            ItemSearchCriteria criteria = new ItemSearchCriteria(null, null, null, null);
             Page<Item> expectedPage = new PageImpl<>(List.of(testItem));
 
             when(securityUtils.isAdmin()).thenReturn(true);
@@ -139,16 +154,19 @@ class ItemServiceImplTest {
         }
 
         @Test
-        @DisplayName("should throw UnauthorizedException when user not authenticated")
-        void getAllItems_notAuthenticated_throwsException() {
+        @DisplayName("should return empty page when workspace list is empty for non-admin")
+        void getAllItems_notAuthenticated_returnsEmpty() {
             Pageable pageable = PageRequest.of(0, 10);
-            ItemSearchCriteria criteria = new ItemSearchCriteria(null, null, null);
+            ItemSearchCriteria criteria = new ItemSearchCriteria(null, null, null, null);
+            Page<Item> emptyPage = new PageImpl<>(List.of());
 
             when(securityUtils.isAdmin()).thenReturn(false);
-            when(securityUtils.getCurrentUserId()).thenReturn(Optional.empty());
+            when(workspaceAccessUtils.getAccessibleWorkspaceIds()).thenReturn(List.of());
+            when(itemRepository.findAll(any(Specification.class), eq(pageable))).thenReturn(emptyPage);
 
-            assertThatThrownBy(() -> itemService.getAllItems(pageable, criteria))
-                    .isInstanceOf(UnauthorizedException.class);
+            Page<Item> result = itemService.getAllItems(pageable, criteria);
+
+            assertThat(result.getContent()).isEmpty();
         }
     }
 
@@ -157,11 +175,11 @@ class ItemServiceImplTest {
     class GetItemByIdTests {
 
         @Test
-        @DisplayName("should return item when exists")
+        @DisplayName("should return item when exists and user has workspace access")
         void getItemById_existingId_returnsItem() {
             when(itemRepository.findById(testId)).thenReturn(Optional.of(testItem));
             when(securityUtils.isAdmin()).thenReturn(false);
-            when(securityUtils.getCurrentUserId()).thenReturn(Optional.of(testUserId));
+            when(workspaceAccessUtils.getAccessibleWorkspaceIds()).thenReturn(List.of(testWorkspaceId));
 
             Optional<Item> result = itemService.getItemById(testId);
 
@@ -171,8 +189,8 @@ class ItemServiceImplTest {
         }
 
         @Test
-        @DisplayName("should throw exception when item not found")
-        void getItemById_nonExistingId_throwsException() {
+        @DisplayName("should return empty when item not found")
+        void getItemById_nonExistingId_returnsEmpty() {
             UUID nonExistingId = UUID.randomUUID();
             when(itemRepository.findById(nonExistingId)).thenReturn(Optional.empty());
 
@@ -194,26 +212,63 @@ class ItemServiceImplTest {
         }
 
         @Test
-        @DisplayName("should throw when non-owner accesses item")
+        @DisplayName("should throw when user has no access to item's workspace")
         void getItemById_nonOwner_throwsException() {
-            UUID otherUserId = UUID.randomUUID();
+            UUID otherWorkspaceId = UUID.randomUUID();
             when(itemRepository.findById(testId)).thenReturn(Optional.of(testItem));
             when(securityUtils.isAdmin()).thenReturn(false);
-            when(securityUtils.getCurrentUserId()).thenReturn(Optional.of(otherUserId));
+            when(workspaceAccessUtils.getAccessibleWorkspaceIds()).thenReturn(List.of(otherWorkspaceId));
 
             assertThatThrownBy(() -> itemService.getItemById(testId))
                     .isInstanceOf(ItemNotFoundException.class);
         }
+    }
+
+    @Nested
+    @DisplayName("getItemByBarcode")
+    class GetItemByBarcodeTests {
 
         @Test
-        @DisplayName("should throw UnauthorizedException when not authenticated")
-        void getItemById_notAuthenticated_throwsException() {
-            when(itemRepository.findById(testId)).thenReturn(Optional.of(testItem));
+        @DisplayName("should return item when barcode matches in accessible workspace")
+        void getItemByBarcode_found_returnsItem() {
+            String barcode = "1234567890";
+            testItem.setBarcode(barcode);
             when(securityUtils.isAdmin()).thenReturn(false);
-            when(securityUtils.getCurrentUserId()).thenReturn(Optional.empty());
+            when(workspaceAccessUtils.getAccessibleWorkspaceIds()).thenReturn(List.of(testWorkspaceId));
+            when(itemRepository.findByBarcodeAndWorkspaceIds(barcode, List.of(testWorkspaceId)))
+                    .thenReturn(Optional.of(testItem));
 
-            assertThatThrownBy(() -> itemService.getItemById(testId))
-                    .isInstanceOf(UnauthorizedException.class);
+            Optional<Item> result = itemService.getItemByBarcode(barcode);
+
+            assertThat(result).isPresent();
+            assertThat(result.get().getBarcode()).isEqualTo(barcode);
+            verify(itemRepository).findByBarcodeAndWorkspaceIds(barcode, List.of(testWorkspaceId));
+        }
+
+        @Test
+        @DisplayName("should return empty when barcode not found")
+        void getItemByBarcode_notFound_returnsEmpty() {
+            String barcode = "NONEXISTENT";
+            when(securityUtils.isAdmin()).thenReturn(false);
+            when(workspaceAccessUtils.getAccessibleWorkspaceIds()).thenReturn(List.of(testWorkspaceId));
+            when(itemRepository.findByBarcodeAndWorkspaceIds(barcode, List.of(testWorkspaceId)))
+                    .thenReturn(Optional.empty());
+
+            Optional<Item> result = itemService.getItemByBarcode(barcode);
+
+            assertThat(result).isEmpty();
+        }
+
+        @Test
+        @DisplayName("should return empty when workspace list is empty")
+        void getItemByBarcode_noWorkspaces_returnsEmpty() {
+            when(securityUtils.isAdmin()).thenReturn(false);
+            when(workspaceAccessUtils.getAccessibleWorkspaceIds()).thenReturn(List.of());
+
+            Optional<Item> result = itemService.getItemByBarcode("1234567890");
+
+            assertThat(result).isEmpty();
+            verify(itemRepository, never()).findByBarcodeAndWorkspaceIds(any(), any());
         }
     }
 
@@ -221,10 +276,18 @@ class ItemServiceImplTest {
     @DisplayName("createItem")
     class CreateItemTests {
 
+        private WorkspaceMember ownerMember;
+
+        @BeforeEach
+        void setUpOwnerMember() {
+            ownerMember = new WorkspaceMember();
+            ownerMember.setRole(WorkspaceRole.OWNER);
+        }
+
         @Test
         @DisplayName("should create item with valid request")
         void createItem_validRequest_createsItem() throws IOException {
-            ItemRequest request = new ItemRequest("New Item", testListId, ItemStatus.AVAILABLE, 5, null);
+            ItemRequest request = new ItemRequest("New Item", testListId, ItemStatus.AVAILABLE, 5, null, null);
             when(securityUtils.isAdmin()).thenReturn(true);
             when(itemListRepository.findById(testListId)).thenReturn(Optional.of(testList));
             when(itemRepository.save(any(Item.class))).thenAnswer(invocation -> {
@@ -245,7 +308,7 @@ class ItemServiceImplTest {
         @Test
         @DisplayName("should create item with default status when not provided")
         void createItem_noStatus_usesDefaultStatus() throws IOException {
-            ItemRequest request = new ItemRequest("New Item", testListId, null, null, null);
+            ItemRequest request = new ItemRequest("New Item", testListId, null, null, null, null);
             when(securityUtils.isAdmin()).thenReturn(true);
             when(itemListRepository.findById(testListId)).thenReturn(Optional.of(testList));
             when(itemRepository.save(any(Item.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -260,7 +323,7 @@ class ItemServiceImplTest {
         @DisplayName("should throw exception when list not found")
         void createItem_listNotFound_throwsException() {
             UUID nonExistingListId = UUID.randomUUID();
-            ItemRequest request = new ItemRequest("New Item", nonExistingListId, ItemStatus.AVAILABLE, 5, null);
+            ItemRequest request = new ItemRequest("New Item", nonExistingListId, ItemStatus.AVAILABLE, 5, null, null);
             when(itemListRepository.findById(nonExistingListId)).thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> itemService.createItem(request, null))
@@ -270,7 +333,7 @@ class ItemServiceImplTest {
         @Test
         @DisplayName("should upload image to S3 when provided")
         void createItem_withImage_uploadsToS3() throws IOException {
-            ItemRequest request = new ItemRequest("New Item", testListId, ItemStatus.DAMAGED, 10, null);
+            ItemRequest request = new ItemRequest("New Item", testListId, ItemStatus.DAMAGED, 10, null, null);
             // JPEG magic bytes (FF D8 FF) followed by dummy data
             byte[] jpegBytes = new byte[]{(byte) 0xFF, (byte) 0xD8, (byte) 0xFF, (byte) 0xE0, 0, 0, 0, 0, 0, 0, 0, 0};
             MockMultipartFile image = new MockMultipartFile(
@@ -292,7 +355,7 @@ class ItemServiceImplTest {
         @Test
         @DisplayName("should create item with PNG image")
         void createItem_withPngImage_uploadsToS3() throws IOException {
-            ItemRequest request = new ItemRequest("PNG Item", testListId, ItemStatus.AVAILABLE, 1, null);
+            ItemRequest request = new ItemRequest("PNG Item", testListId, ItemStatus.AVAILABLE, 1, null, null);
             byte[] pngBytes = new byte[]{(byte) 0x89, 0x50, 0x4E, 0x47, 0, 0, 0, 0, 0, 0, 0, 0};
             MockMultipartFile image = new MockMultipartFile("image", "test.png", "image/png", pngBytes);
 
@@ -310,7 +373,7 @@ class ItemServiceImplTest {
         @Test
         @DisplayName("should create item with GIF image")
         void createItem_withGifImage_uploadsToS3() throws IOException {
-            ItemRequest request = new ItemRequest("GIF Item", testListId, ItemStatus.AVAILABLE, 1, null);
+            ItemRequest request = new ItemRequest("GIF Item", testListId, ItemStatus.AVAILABLE, 1, null, null);
             byte[] gifBytes = new byte[]{0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 0, 0, 0, 0, 0, 0};
             MockMultipartFile image = new MockMultipartFile("image", "test.gif", "image/gif", gifBytes);
 
@@ -328,7 +391,7 @@ class ItemServiceImplTest {
         @Test
         @DisplayName("should create item with WebP image")
         void createItem_withWebpImage_uploadsToS3() throws IOException {
-            ItemRequest request = new ItemRequest("WebP Item", testListId, ItemStatus.AVAILABLE, 1, null);
+            ItemRequest request = new ItemRequest("WebP Item", testListId, ItemStatus.AVAILABLE, 1, null, null);
             // RIFF....WEBP
             byte[] webpBytes = new byte[]{0x52, 0x49, 0x46, 0x46, 0, 0, 0, 0, 0x57, 0x45, 0x42, 0x50};
             MockMultipartFile image = new MockMultipartFile("image", "test.webp", "image/webp", webpBytes);
@@ -347,7 +410,7 @@ class ItemServiceImplTest {
         @Test
         @DisplayName("should throw exception for file too large")
         void createItem_fileTooLarge_throwsException() {
-            ItemRequest request = new ItemRequest("Item", testListId, ItemStatus.AVAILABLE, 1, null);
+            ItemRequest request = new ItemRequest("Item", testListId, ItemStatus.AVAILABLE, 1, null, null);
             byte[] largeFile = new byte[10 * 1024 * 1024 + 1]; // just over 10MB
             largeFile[0] = (byte) 0xFF;
             largeFile[1] = (byte) 0xD8;
@@ -365,7 +428,7 @@ class ItemServiceImplTest {
         @Test
         @DisplayName("should throw exception for invalid file type")
         void createItem_invalidFileType_throwsException() {
-            ItemRequest request = new ItemRequest("Item", testListId, ItemStatus.AVAILABLE, 1, null);
+            ItemRequest request = new ItemRequest("Item", testListId, ItemStatus.AVAILABLE, 1, null, null);
             byte[] invalidBytes = new byte[]{0x25, 0x50, 0x44, 0x46, 0, 0, 0, 0, 0, 0, 0, 0}; // PDF magic
             MockMultipartFile image = new MockMultipartFile("image", "test.pdf", "application/pdf", invalidBytes);
 
@@ -380,7 +443,7 @@ class ItemServiceImplTest {
         @Test
         @DisplayName("should throw exception for file too small to detect type")
         void createItem_fileTooSmall_throwsException() {
-            ItemRequest request = new ItemRequest("Item", testListId, ItemStatus.AVAILABLE, 1, null);
+            ItemRequest request = new ItemRequest("Item", testListId, ItemStatus.AVAILABLE, 1, null, null);
             byte[] tinyBytes = new byte[]{0x01, 0x02};
             MockMultipartFile image = new MockMultipartFile("image", "tiny.bin", "application/octet-stream", tinyBytes);
 
@@ -393,27 +456,27 @@ class ItemServiceImplTest {
         }
 
         @Test
-        @DisplayName("should throw when non-owner creates item in another user's list")
+        @DisplayName("should throw when non-member tries to create item in workspace list")
         void createItem_nonOwner_throwsException() {
-            UUID otherUserId = UUID.randomUUID();
-            ItemRequest request = new ItemRequest("New Item", testListId, ItemStatus.AVAILABLE, 5, null);
+            ItemRequest request = new ItemRequest("New Item", testListId, ItemStatus.AVAILABLE, 5, null, null);
 
             when(itemListRepository.findById(testListId)).thenReturn(Optional.of(testList));
             when(securityUtils.isAdmin()).thenReturn(false);
-            when(securityUtils.getCurrentUserId()).thenReturn(Optional.of(otherUserId));
+            when(workspaceAccessUtils.requireMembership(testWorkspaceId))
+                    .thenThrow(new com.inventory.exception.WorkspaceNotFoundException(testWorkspaceId));
 
             assertThatThrownBy(() -> itemService.createItem(request, null))
-                    .isInstanceOf(ItemListNotFoundException.class);
+                    .isInstanceOf(com.inventory.exception.WorkspaceNotFoundException.class);
         }
 
         @Test
-        @DisplayName("should create item as owner (non-admin)")
+        @DisplayName("should create item as workspace member (non-admin)")
         void createItem_asOwner_createsItem() throws IOException {
-            ItemRequest request = new ItemRequest("Owner Item", testListId, ItemStatus.AVAILABLE, 3, null);
+            ItemRequest request = new ItemRequest("Owner Item", testListId, ItemStatus.AVAILABLE, 3, null, null);
 
             when(itemListRepository.findById(testListId)).thenReturn(Optional.of(testList));
             when(securityUtils.isAdmin()).thenReturn(false);
-            when(securityUtils.getCurrentUserId()).thenReturn(Optional.of(testUserId));
+            when(workspaceAccessUtils.requireMembership(testWorkspaceId)).thenReturn(ownerMember);
             when(itemRepository.save(any(Item.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
             Item result = itemService.createItem(request, null);
@@ -429,7 +492,7 @@ class ItemServiceImplTest {
         @Test
         @DisplayName("should update existing item")
         void updateItem_existingId_updatesItem() throws IOException {
-            ItemRequest request = new ItemRequest("Updated Name", testListId, ItemStatus.TO_VERIFY, 20, null);
+            ItemRequest request = new ItemRequest("Updated Name", testListId, ItemStatus.TO_VERIFY, 20, null, null);
             when(securityUtils.isAdmin()).thenReturn(true);
             when(itemRepository.findById(testId)).thenReturn(Optional.of(testItem));
             when(itemListRepository.findById(testListId)).thenReturn(Optional.of(testList));
@@ -447,7 +510,7 @@ class ItemServiceImplTest {
         @DisplayName("should keep existing status when not provided in request")
         void updateItem_noStatus_keepsExistingStatus() throws IOException {
             testItem.setStatus(ItemStatus.DAMAGED);
-            ItemRequest request = new ItemRequest("Updated Name", testListId, null, null, null);
+            ItemRequest request = new ItemRequest("Updated Name", testListId, null, null, null, null);
             when(securityUtils.isAdmin()).thenReturn(true);
             when(itemRepository.findById(testId)).thenReturn(Optional.of(testItem));
             when(itemListRepository.findById(testListId)).thenReturn(Optional.of(testList));
@@ -461,7 +524,7 @@ class ItemServiceImplTest {
         @Test
         @DisplayName("should update item with image")
         void updateItem_withImage_uploadsToS3() throws IOException {
-            ItemRequest request = new ItemRequest("Updated", testListId, ItemStatus.AVAILABLE, 5, null);
+            ItemRequest request = new ItemRequest("Updated", testListId, ItemStatus.AVAILABLE, 5, null, null);
             byte[] pngBytes = new byte[]{(byte) 0x89, 0x50, 0x4E, 0x47, 0, 0, 0, 0, 0, 0, 0, 0};
             MockMultipartFile image = new MockMultipartFile("image", "test.png", "image/png", pngBytes);
 
@@ -482,7 +545,7 @@ class ItemServiceImplTest {
         @DisplayName("should throw when item not found")
         void updateItem_notFound_throwsException() {
             UUID nonExistingId = UUID.randomUUID();
-            ItemRequest request = new ItemRequest("Updated", testListId, ItemStatus.AVAILABLE, 5, null);
+            ItemRequest request = new ItemRequest("Updated", testListId, ItemStatus.AVAILABLE, 5, null, null);
 
             when(itemRepository.findById(nonExistingId)).thenReturn(Optional.empty());
 
@@ -496,11 +559,15 @@ class ItemServiceImplTest {
     class DeleteItemTests {
 
         @Test
-        @DisplayName("should delete existing item")
+        @DisplayName("should delete existing item as workspace member")
         void deleteItem_existingId_deletesItem() {
+            WorkspaceMember ownerMember = new WorkspaceMember();
+            ownerMember.setRole(WorkspaceRole.OWNER);
+
             when(itemRepository.findById(testId)).thenReturn(Optional.of(testItem));
             when(securityUtils.isAdmin()).thenReturn(false);
-            when(securityUtils.getCurrentUserId()).thenReturn(Optional.of(testUserId));
+            when(workspaceAccessUtils.getAccessibleWorkspaceIds()).thenReturn(List.of(testWorkspaceId));
+            when(workspaceAccessUtils.requireMembership(testWorkspaceId)).thenReturn(ownerMember);
             doNothing().when(itemRepository).delete(testItem);
 
             itemService.deleteItem(testId);
@@ -531,12 +598,12 @@ class ItemServiceImplTest {
         }
 
         @Test
-        @DisplayName("should throw when non-owner tries to delete")
+        @DisplayName("should throw when non-member tries to delete item")
         void deleteItem_nonOwner_throwsException() {
-            UUID otherUserId = UUID.randomUUID();
+            UUID otherWorkspaceId = UUID.randomUUID();
             when(itemRepository.findById(testId)).thenReturn(Optional.of(testItem));
             when(securityUtils.isAdmin()).thenReturn(false);
-            when(securityUtils.getCurrentUserId()).thenReturn(Optional.of(otherUserId));
+            when(workspaceAccessUtils.getAccessibleWorkspaceIds()).thenReturn(List.of(otherWorkspaceId));
 
             assertThatThrownBy(() -> itemService.deleteItem(testId))
                     .isInstanceOf(ItemNotFoundException.class);
@@ -548,7 +615,7 @@ class ItemServiceImplTest {
     class GetDashboardStatsTests {
 
         @Test
-        @DisplayName("should return dashboard statistics")
+        @DisplayName("should return dashboard statistics for admin")
         void getDashboardStats_returnsStats() {
             when(securityUtils.isAdmin()).thenReturn(true);
             when(itemRepository.count()).thenReturn(10L);
@@ -578,20 +645,20 @@ class ItemServiceImplTest {
         }
 
         @Test
-        @DisplayName("should return user-scoped dashboard statistics for non-admin")
-        void getDashboardStats_nonAdmin_returnsUserScopedStats() {
+        @DisplayName("should return workspace-scoped dashboard statistics for non-admin")
+        void getDashboardStats_nonAdmin_returnsWorkspaceScopedStats() {
             when(securityUtils.isAdmin()).thenReturn(false);
-            when(securityUtils.getCurrentUserId()).thenReturn(Optional.of(testUserId));
-            when(itemRepository.countByUserId(testUserId)).thenReturn(5L);
-            when(itemRepository.sumStockByUserId(testUserId)).thenReturn(50L);
-            when(itemRepository.countByStatusAndUserId(testUserId)).thenReturn(
+            when(workspaceAccessUtils.getAccessibleWorkspaceIds()).thenReturn(List.of(testWorkspaceId));
+            when(itemRepository.countByWorkspaceIds(List.of(testWorkspaceId))).thenReturn(5L);
+            when(itemRepository.sumStockByWorkspaceIds(List.of(testWorkspaceId))).thenReturn(50L);
+            when(itemRepository.countByStatusAndWorkspaceIds(List.of(testWorkspaceId))).thenReturn(
                     Collections.singletonList(new Object[]{ItemStatus.AVAILABLE, 5L})
             );
-            when(itemRepository.countByCategoryAndUserId(testUserId)).thenReturn(
+            when(itemRepository.countByCategoryAndWorkspaceIds(List.of(testWorkspaceId))).thenReturn(
                     Collections.singletonList(new Object[]{"Electronics", 3L})
             );
-            when(itemRepository.getListsOverviewByUserId(testUserId)).thenReturn(List.of());
-            when(itemRepository.findTop5ByUserIdOrderByUpdatedAtDesc(testUserId)).thenReturn(List.of());
+            when(itemRepository.getListsOverviewByWorkspaceIds(List.of(testWorkspaceId))).thenReturn(List.of());
+            when(itemRepository.findTop5ByWorkspaceIdsOrderByUpdatedAtDesc(List.of(testWorkspaceId))).thenReturn(List.of());
 
             DashboardStats stats = itemService.getDashboardStats();
 
@@ -602,13 +669,15 @@ class ItemServiceImplTest {
         }
 
         @Test
-        @DisplayName("should throw UnauthorizedException when non-admin not authenticated")
-        void getDashboardStats_notAuthenticated_throwsException() {
+        @DisplayName("should return empty stats when user has no accessible workspaces")
+        void getDashboardStats_noWorkspaces_returnsEmptyStats() {
             when(securityUtils.isAdmin()).thenReturn(false);
-            when(securityUtils.getCurrentUserId()).thenReturn(Optional.empty());
+            when(workspaceAccessUtils.getAccessibleWorkspaceIds()).thenReturn(List.of());
 
-            assertThatThrownBy(() -> itemService.getDashboardStats())
-                    .isInstanceOf(UnauthorizedException.class);
+            DashboardStats stats = itemService.getDashboardStats();
+
+            assertThat(stats.totalItems()).isEqualTo(0L);
+            assertThat(stats.totalQuantity()).isEqualTo(0L);
         }
 
         @Test
@@ -635,39 +704,5 @@ class ItemServiceImplTest {
             assertThat(stats.listsOverview()).hasSize(1);
             assertThat(stats.listsOverview().get(0).listName()).isEqualTo("My List");
         }
-/*
-        @Test
-        @DisplayName("should include recent items with and without SKU custom field")
-        void getDashboardStats_withRecentItems_mapsCorrectly() {
-            Item itemWithSku = new Item();
-            itemWithSku.setId(UUID.randomUUID());
-            itemWithSku.setName("SKU Item");
-            itemWithSku.setItemList(testList);
-            itemWithSku.setStatus(ItemStatus.AVAILABLE);
-            itemWithSku.setStock(5);
-            itemWithSku.setCustomFieldValues(Map.of("sku", "ABC-123"));
-
-            Item itemWithoutSku = new Item();
-            itemWithoutSku.setId(UUID.randomUUID());
-            itemWithoutSku.setName("No SKU Item");
-            itemWithoutSku.setItemList(testList);
-            itemWithoutSku.setStatus(ItemStatus.TO_VERIFY);
-            itemWithoutSku.setStock(2);
-            itemWithoutSku.setCustomFieldValues(null);
-
-            when(securityUtils.isAdmin()).thenReturn(true);
-            when(itemRepository.count()).thenReturn(2L);
-            when(itemRepository.sumStock()).thenReturn(7L);
-            when(itemRepository.getListsOverview()).thenReturn(List.of());
-            when(itemRepository.findTop5ByOrderByUpdatedAtDesc()).thenReturn(List.of(itemWithSku, itemWithoutSku));
-            when(itemRepository.countByStatus()).thenReturn(List.of());
-            when(itemRepository.countByCategory()).thenReturn(List.of());
-
-            DashboardStats stats = itemService.getDashboardStats();
-
-            assertThat(stats.recentlyUpdated()).hasSize(2);
-            assertThat(stats.recentlyUpdated().get(0).sku()).isEqualTo("ABC-123");
-            assertThat(stats.recentlyUpdated().get(1).sku()).isNull();
-        }*/
     }
 }

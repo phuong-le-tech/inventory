@@ -29,4 +29,15 @@ public interface ItemListRepository extends JpaRepository<ItemList, UUID>, JpaSp
 
     @Query("SELECT il.id, COUNT(i) FROM ItemList il LEFT JOIN il.items i WHERE il.id IN :ids GROUP BY il.id")
     List<Object[]> countItemsByListIds(@Param("ids") List<UUID> ids);
+
+    // Workspace-scoped queries
+    Page<ItemList> findByWorkspaceId(@NonNull UUID workspaceId, @NonNull Pageable pageable);
+
+    @Query("SELECT il FROM ItemList il WHERE il.id = :id AND il.workspace.id IN :workspaceIds")
+    Optional<ItemList> findByIdAndWorkspaceIdIn(@NonNull UUID id, @NonNull List<UUID> workspaceIds);
+
+    long countByWorkspaceId(@NonNull UUID workspaceId);
+
+    @Query("SELECT il.workspace.id, COUNT(il) FROM ItemList il WHERE il.workspace.id IN :workspaceIds GROUP BY il.workspace.id")
+    List<Object[]> countListsByWorkspaceIds(@Param("workspaceIds") List<UUID> workspaceIds);
 }

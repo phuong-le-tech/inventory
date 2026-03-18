@@ -23,5 +23,8 @@ public record ItemRequest(
         @Min(value = 0, message = "Stock must not be negative")
         Integer stock,
 
+        @Size(max = 255, message = "Barcode must not exceed 255 characters")
+        String barcode,
+
         Map<String, Object> customFieldValues
 ) {}

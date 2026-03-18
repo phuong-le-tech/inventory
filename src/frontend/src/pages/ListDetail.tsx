@@ -9,9 +9,11 @@ import {
   List,
   MoreHorizontal,
   Download,
+  ScanLine,
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { listsApi, itemsApi } from "../services/api";
+import BarcodeScannerModal from "../components/BarcodeScannerModal";
 import {
   ItemStatus,
   formatStatus,
@@ -55,6 +57,7 @@ export default function ListDetail() {
   const [statusFilter, setStatusFilter] = useState<ItemStatus | "">("");
   const [itemPage, setItemPage] = useState(0);
   const [isExporting, setIsExporting] = useState(false);
+  const [scannerOpen, setScannerOpen] = useState(false);
 
   const { data: list, isLoading: listLoading, error: listError } = useQuery({
     queryKey: queryKeys.lists.detail(id!),
@@ -111,6 +114,23 @@ export default function ListDetail() {
     const itemId = pendingDeleteId;
     setPendingDeleteId(null);
     deleteMutation.mutate(itemId);
+  };
+
+  const handleBarcodeScan = async (barcode: string) => {
+    try {
+      const item = await itemsApi.getByBarcode(barcode);
+      if (item && item.itemListId === id) {
+        navigate(`/lists/${id}/items/${item.id}/edit`);
+      } else if (item) {
+        // Item exists but in a different list — navigate to its edit page
+        navigate(`/lists/${item.itemListId}/items/${item.id}/edit`);
+      } else {
+        // No item found — create new with barcode prefilled
+        navigate(`/lists/${id}/items/new?barcode=${encodeURIComponent(barcode)}`);
+      }
+    } catch {
+      navigate(`/lists/${id}/items/new?barcode=${encodeURIComponent(barcode)}`);
+    }
   };
 
   const handleExportCsv = async () => {
@@ -216,6 +236,13 @@ export default function ListDetail() {
             >
               <Download className="h-4 w-4 mr-1.5" />
               {isExporting ? "Export..." : "Exporter CSV"}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => setScannerOpen(true)}
+            >
+              <ScanLine className="h-4 w-4 mr-1.5" />
+              Scanner
             </Button>
             <Button asChild>
               <Link to={`/lists/${id}/items/new`}>
@@ -341,9 +368,15 @@ export default function ListDetail() {
                     <h3 className="font-semibold tracking-tight mb-1">
                       {item.name}
                     </h3>
-                    <p className="text-muted-foreground text-sm mb-2">
+                    <p className="text-muted-foreground text-sm mb-1">
                       <span className="font-medium">Stock:</span> {item.stock}
                     </p>
+                    {item.barcode && (
+                      <p className="text-muted-foreground text-xs mb-1 font-mono truncate">
+                        <span className="font-medium font-sans">Code-barres:</span>{" "}
+                        {item.barcode}
+                      </p>
+                    )}
                     {list.customFieldDefinitions &&
                       list.customFieldDefinitions.length > 0 && (
                         <div className="space-y-0.5">
@@ -401,6 +434,12 @@ export default function ListDetail() {
         confirmLabel="Supprimer"
         onConfirm={handleDeleteConfirm}
         onCancel={() => setPendingDeleteId(null)}
+      />
+
+      <BarcodeScannerModal
+        isOpen={scannerOpen}
+        onClose={() => setScannerOpen(false)}
+        onScan={handleBarcodeScan}
       />
     </div>
   );

@@ -12,6 +12,7 @@ public record AdminItemResponse(
         String name,
         String status,
         Integer stock,
+        String barcode,
         String imageUrl,
         UUID listId,
         String listName,
@@ -27,6 +28,7 @@ public record AdminItemResponse(
                 item.getName(),
                 item.getStatus() != null ? item.getStatus().name() : null,
                 item.getStock(),
+                item.getBarcode(),
                 item.getImageKey() != null
                         ? imageStorageService.getPresignedUrl(item.getImageKey())
                         : null,

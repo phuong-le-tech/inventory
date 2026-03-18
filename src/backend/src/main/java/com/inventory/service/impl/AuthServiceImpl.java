@@ -22,6 +22,7 @@ import com.inventory.security.JwtService;
 import com.inventory.service.EmailSender;
 import com.inventory.service.IAuthService;
 import com.inventory.service.IUserService;
+import com.inventory.service.IWorkspaceService;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.lang.NonNull;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -62,6 +63,7 @@ public class AuthServiceImpl implements IAuthService {
     private final EmailSender emailSender;
     private final PasswordEncoder passwordEncoder;
     private final Executor emailExecutor;
+    private final IWorkspaceService workspaceService;
 
     @Value("${app.frontend-url}")
     private String frontendUrl;
@@ -104,6 +106,8 @@ public class AuthServiceImpl implements IAuthService {
         User user = userService.createUser(createRequest);
         user.setEnabled(false);
         user = userRepository.save(user);
+
+        workspaceService.createDefaultWorkspace(user);
 
         sendVerificationEmail(user);
 
@@ -375,7 +379,9 @@ public class AuthServiceImpl implements IAuthService {
                 newUser.setPictureUrl(pictureUrl);
                 newUser.setRole(Role.USER);
                 newUser.setEnabled(true);
-                return userRepository.save(newUser);
+                User savedUser = userRepository.save(newUser);
+                workspaceService.createDefaultWorkspace(savedUser);
+                return savedUser;
             });
     }
 }
