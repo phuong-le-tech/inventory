@@ -13,6 +13,10 @@ UPDATE item_lists il
 SET workspace_id = (
     SELECT w.id FROM workspaces w
     WHERE w.owner_id = il.user_id AND w.is_default = true
+)
+WHERE EXISTS (
+    SELECT 1 FROM workspaces w
+    WHERE w.owner_id = il.user_id AND w.is_default = true
 );
 
 -- Now enforce NOT NULL on workspace_id

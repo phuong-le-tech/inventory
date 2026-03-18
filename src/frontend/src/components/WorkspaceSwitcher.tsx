@@ -37,8 +37,10 @@ export function WorkspaceSwitcher() {
       {open && (
         <>
           <div
+            role="presentation"
             className="fixed inset-0 z-40"
             onClick={() => setOpen(false)}
+            onKeyDown={(e) => { if (e.key === 'Escape') setOpen(false); }}
           />
           <div className="absolute left-3 right-3 top-full mt-1 z-50 bg-popover border rounded-lg shadow-lg overflow-hidden">
             <div role="listbox" aria-label="Espaces de travail" className="p-1 max-h-64 overflow-y-auto">
