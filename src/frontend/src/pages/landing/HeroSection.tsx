@@ -2,12 +2,14 @@ import { Link } from "react-router-dom";
 import {
   ArrowRight,
   Package,
-  Inbox,
+  Layers,
   AlertTriangle,
-  XCircle,
+  AlertCircle,
   Shield,
   Zap,
   CreditCard,
+  Plus,
+  Search,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BlurFade } from "@/components/effects/blur-fade";
@@ -20,23 +22,23 @@ import {
   MOCK_STATS,
   MOCK_LISTS_OVERVIEW,
   MOCK_RECENT_ITEMS,
+  MOCK_STATUS_CHART,
+  MOCK_CATEGORY_DATA,
 } from "./mockData";
 
 const STATUS_LABELS: Record<string, string> = {
   AVAILABLE: "Disponible",
   TO_VERIFY: "À vérifier",
-  NEEDS_MAINTENANCE: "Maintenance requise",
+  NEEDS_MAINTENANCE: "Maintenance",
   DAMAGED: "Endommagé",
 };
 
 const STATUS_COLORS: Record<string, string> = {
-  AVAILABLE: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-400",
-  TO_VERIFY: "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-400",
-  NEEDS_MAINTENANCE: "bg-orange-100 text-orange-700 dark:bg-orange-500/15 dark:text-orange-400",
-  DAMAGED: "bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-400",
+  AVAILABLE: "bg-emerald-100 text-emerald-700",
+  TO_VERIFY: "bg-amber-100 text-amber-700",
+  NEEDS_MAINTENANCE: "bg-indigo-100 text-indigo-700",
+  DAMAGED: "bg-red-100 text-red-700",
 };
-
-const LIST_COLORS = ["bg-blue-500", "bg-emerald-500", "bg-amber-500"];
 
 const TRUST_BADGES = [
   { icon: Zap, label: "Gratuit" },
@@ -48,28 +50,34 @@ const statCards = [
   {
     label: "Total articles",
     value: MOCK_STATS.totalItems.toLocaleString("fr-FR"),
-    subtext: "Toutes listes confondues",
     icon: Package,
+    iconColor: "text-green-500",
+    iconBg: "bg-green-50",
   },
   {
     label: "Quantité totale",
     value: MOCK_STATS.totalQuantity.toLocaleString("fr-FR"),
-    subtext: "Unités en inventaire",
-    icon: Inbox,
+    icon: Layers,
+    iconColor: "text-indigo-500",
+    iconBg: "bg-indigo-100",
   },
   {
     label: "À vérifier",
     value: MOCK_STATS.toVerifyCount,
-    subtext: "Articles à contrôler",
     icon: AlertTriangle,
+    iconColor: "text-amber-500",
+    iconBg: "bg-amber-50",
   },
   {
     label: "Attention requise",
     value: MOCK_STATS.needsAttentionCount,
-    subtext: "Maintenance ou endommagé",
-    icon: XCircle,
+    icon: AlertCircle,
+    iconColor: "text-red-500",
+    iconBg: "bg-red-50",
   },
 ];
+
+const maxBarValue = Math.max(...MOCK_STATUS_CHART.map((d) => d.count));
 
 export function HeroSection() {
   return (
@@ -137,6 +145,7 @@ export function HeroSection() {
         <BlurFade delay={0.6} duration={0.8}>
           <div className="mt-16 md:mt-20">
             <div className="rounded-2xl border bg-card overflow-hidden shadow-float">
+              {/* Browser chrome */}
               <div className="flex items-center gap-2 px-4 py-3 border-b bg-muted/30" aria-hidden="true">
                 <div className="flex gap-1.5">
                   <span className="w-3 h-3 rounded-full bg-red-500/50" />
@@ -148,140 +157,191 @@ export function HeroSection() {
                 </span>
               </div>
 
-              <div className="p-5 md:p-8 space-y-8">
-                <StaggeredList
-                  className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4"
-                  staggerDelay={0.08}
-                >
-                  {statCards.map((card, idx) => (
-                    <StaggeredItem key={idx}>
-                      <div className="rounded-xl border bg-background/50 p-4 md:p-5">
-                        <div className="flex items-start justify-between mb-3 md:mb-4">
-                          <span className="font-medium text-xs md:text-sm text-foreground">
-                            {card.label}
-                          </span>
-                          <card.icon
-                            className="h-4 w-4 text-muted-foreground hidden sm:block"
-                            aria-hidden="true"
-                          />
-                        </div>
-                        <div className="text-2xl md:text-3xl font-display font-bold tracking-tight mb-1">
-                          {card.value}
-                        </div>
-                        <div className="text-xs text-muted-foreground hidden sm:block">
-                          {card.subtext}
-                        </div>
-                      </div>
-                    </StaggeredItem>
-                  ))}
-                </StaggeredList>
-
-                <div>
-                  <h3 className="text-sm font-semibold text-foreground mb-3">
-                    Aperçu des listes
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
-                    {MOCK_LISTS_OVERVIEW.map((list, idx) => (
-                      <div
-                        key={idx}
-                        className="rounded-xl border bg-background/50 p-4 md:p-5"
-                      >
-                        <div className="flex items-center gap-3 mb-4">
-                          <div
-                            className={`w-3 h-3 rounded-full ${LIST_COLORS[idx]}`}
-                            aria-hidden="true"
-                          />
-                          <span className="font-medium text-sm text-foreground">
-                            {list.listName}
-                          </span>
-                        </div>
-                        <div className="space-y-2">
-                          <div className="flex justify-between items-center text-sm">
-                            <span className="text-muted-foreground">
-                              Articles :
-                            </span>
-                            <span className="font-medium">
-                              {list.itemsCount}
-                            </span>
-                          </div>
-                          <div className="flex justify-between items-center text-sm">
-                            <span className="text-muted-foreground">
-                              Quantité :
-                            </span>
-                            <span className="font-medium">
-                              {list.totalQuantity.toLocaleString("fr-FR")}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
+              <div className="flex">
+                {/* Sidebar mock */}
+                <div className="hidden lg:flex flex-col w-[200px] border-r bg-muted/10 p-4 gap-4" aria-hidden="true">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-7 h-7 bg-brand rounded-lg flex items-center justify-center">
+                      <Package className="h-3.5 w-3.5 text-white" />
+                    </div>
+                    <span className="font-display text-sm font-bold">Shelfio</span>
+                  </div>
+                  {/* Search bar */}
+                  <div className="flex items-center gap-2 px-2.5 py-2 rounded-lg bg-muted/50 border text-xs text-muted-foreground">
+                    <Search className="h-3 w-3" />
+                    <span>Rechercher...</span>
+                    <span className="ml-auto text-[9px] px-1 py-0.5 rounded bg-background border font-mono">⌘K</span>
+                  </div>
+                  {/* Nav items */}
+                  <div className="space-y-0.5">
+                    <div className="flex items-center gap-2 px-2.5 py-2 rounded-lg bg-brand text-white text-xs font-medium">
+                      <div className="w-3.5 h-3.5 rounded bg-white/20" />
+                      Tableau de bord
+                    </div>
+                    <div className="flex items-center gap-2 px-2.5 py-2 rounded-lg text-xs text-muted-foreground">
+                      <div className="w-3.5 h-3.5 rounded bg-muted" />
+                      Mes Listes
+                    </div>
+                    <div className="flex items-center gap-2 px-2.5 py-2 rounded-lg text-xs text-muted-foreground">
+                      <div className="w-3.5 h-3.5 rounded bg-muted" />
+                      Paramètres
+                    </div>
                   </div>
                 </div>
 
-                <div className="hidden md:block">
-                  <h3 className="text-sm font-semibold text-foreground mb-3">
-                    Récemment modifiés
-                  </h3>
-                  <div className="rounded-xl border bg-background/50 overflow-hidden">
-                    <table className="w-full text-sm text-left">
-                      <thead className="bg-muted/30 text-muted-foreground font-medium text-xs">
-                        <tr>
-                          <th scope="col" className="px-5 py-3 font-medium">
-                            Nom de l'article
-                          </th>
-                          <th scope="col" className="px-5 py-3 font-medium">
-                            Liste
-                          </th>
-                          <th scope="col" className="px-5 py-3 font-medium">
-                            Quantité
-                          </th>
-                          <th scope="col" className="px-5 py-3 font-medium">
-                            Statut
-                          </th>
-                          <th scope="col" className="px-5 py-3 font-medium">
-                            Dernière modification
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-border/50">
-                        {MOCK_RECENT_ITEMS.map((item, idx) => (
-                          <tr key={idx} className="text-foreground">
-                            <td className="px-5 py-4 font-medium">
-                              {item.name}
-                            </td>
-                            <td className="px-5 py-4">
-                              <div className="flex items-center gap-2">
-                                <div
-                                  className="w-2 h-2 rounded-full bg-blue-500"
-                                  aria-hidden="true"
-                                />
-                                {item.listName}
-                              </div>
-                            </td>
-                            <td className="px-5 py-4 font-medium">
-                              {item.quantity}
-                            </td>
-                            <td className="px-5 py-4">
-                              <span
-                                className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[item.status] || "bg-muted text-muted-foreground"}`}
-                              >
-                                {STATUS_LABELS[item.status] || item.status}
-                              </span>
-                            </td>
-                            <td className="px-5 py-4 text-muted-foreground">
-                              {new Date(item.lastUpdated).toLocaleDateString(
-                                "fr-FR",
-                                {
-                                  month: "short",
-                                  day: "numeric",
-                                  year: "numeric",
-                                }
-                              )}
-                            </td>
-                          </tr>
+                {/* Main content */}
+                <div className="flex-1 p-5 md:p-7 space-y-6">
+                  {/* Header */}
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-display text-base md:text-lg font-bold tracking-tight text-foreground">
+                      Tableau de bord
+                    </h3>
+                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-brand text-white text-xs font-medium">
+                      <Plus className="h-3 w-3" />
+                      <span className="hidden sm:inline">Ajouter un article</span>
+                    </div>
+                  </div>
+
+                  {/* Stat cards */}
+                  <StaggeredList
+                    className="grid grid-cols-2 lg:grid-cols-4 gap-3"
+                    staggerDelay={0.08}
+                  >
+                    {statCards.map((card, idx) => (
+                      <StaggeredItem key={idx}>
+                        <div className="rounded-xl bg-background/50 border p-3.5 md:p-4">
+                          <div className={`w-8 h-8 rounded-[8px] flex items-center justify-center ${card.iconBg} mb-2.5`}>
+                            <card.icon className={`h-4 w-4 ${card.iconColor}`} aria-hidden="true" />
+                          </div>
+                          <div className="font-display text-xl md:text-2xl font-extrabold tracking-tight leading-none mb-0.5">
+                            {card.value}
+                          </div>
+                          <div className="text-[11px] font-medium text-muted-foreground">
+                            {card.label}
+                          </div>
+                        </div>
+                      </StaggeredItem>
+                    ))}
+                  </StaggeredList>
+
+                  {/* Charts row */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {/* Status bar chart */}
+                    <div className="rounded-xl bg-background/50 border p-4">
+                      <h4 className="text-sm font-bold text-foreground mb-4">
+                        Articles par statut
+                      </h4>
+                      <div className="space-y-2.5">
+                        {MOCK_STATUS_CHART.map((bar) => (
+                          <div key={bar.name} className="flex items-center gap-3">
+                            <span className="text-[11px] text-muted-foreground w-20 text-right flex-shrink-0">
+                              {bar.name}
+                            </span>
+                            <div className="flex-1 h-5 bg-muted/40 rounded-md overflow-hidden">
+                              <div
+                                className="h-full rounded-md transition-all duration-700"
+                                style={{
+                                  width: `${Math.max((bar.count / maxBarValue) * 100, 4)}%`,
+                                  backgroundColor: bar.fill,
+                                }}
+                              />
+                            </div>
+                            <span className="text-[11px] font-medium text-foreground w-8 text-right">
+                              {bar.count}
+                            </span>
+                          </div>
                         ))}
-                      </tbody>
-                    </table>
+                      </div>
+                    </div>
+
+                    {/* Category breakdown */}
+                    <div className="rounded-xl bg-background/50 border p-4">
+                      <h4 className="text-sm font-bold text-foreground mb-4">
+                        Articles par catégorie
+                      </h4>
+                      <div className="space-y-3">
+                        {MOCK_CATEGORY_DATA.map((cat) => (
+                          <div key={cat.name} className="flex items-center gap-3">
+                            <div
+                              className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                              style={{ backgroundColor: cat.color }}
+                            />
+                            <span className="text-xs text-foreground flex-1">{cat.name}</span>
+                            <span className="text-xs font-medium text-foreground">{cat.count}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Tables row (desktop only) */}
+                  <div className="hidden md:grid grid-cols-2 gap-3">
+                    {/* Lists overview */}
+                    <div className="rounded-xl bg-background/50 border p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="text-sm font-bold text-foreground">
+                          Aperçu des listes
+                        </h4>
+                        <span className="text-[11px] font-medium text-brand">Voir tout →</span>
+                      </div>
+                      <table className="w-full text-left">
+                        <thead>
+                          <tr className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                            <th className="pb-2 font-semibold">Nom</th>
+                            <th className="pb-2 font-semibold text-right">Articles</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {MOCK_LISTS_OVERVIEW.map((list, idx) => (
+                            <tr key={idx} className="border-t border-border/30">
+                              <td className="py-2">
+                                <span className="text-xs font-medium text-foreground">
+                                  {list.listName}
+                                </span>
+                              </td>
+                              <td className="py-2 text-right">
+                                <span className="text-xs text-muted-foreground">
+                                  {list.itemsCount}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {/* Recently updated */}
+                    <div className="rounded-xl bg-background/50 border p-4">
+                      <h4 className="text-sm font-bold text-foreground mb-3">
+                        Récemment mis à jour
+                      </h4>
+                      <table className="w-full text-left">
+                        <thead>
+                          <tr className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                            <th className="pb-2 font-semibold">Article</th>
+                            <th className="pb-2 font-semibold text-right">Statut</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {MOCK_RECENT_ITEMS.map((item, idx) => (
+                            <tr key={idx} className="border-t border-border/30">
+                              <td className="py-2">
+                                <span className="text-xs font-medium text-foreground">
+                                  {item.name}
+                                </span>
+                              </td>
+                              <td className="py-2 text-right">
+                                <span
+                                  className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium ${STATUS_COLORS[item.status] || "bg-muted text-muted-foreground"}`}
+                                >
+                                  {STATUS_LABELS[item.status] || item.status}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
                 </div>
               </div>

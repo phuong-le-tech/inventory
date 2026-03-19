@@ -2,6 +2,8 @@ import { createContext, useContext, useState, useEffect, useCallback, ReactNode 
 import { User, LoginCredentials, SignupCredentials, isPremium as checkPremium } from '../types/auth';
 import { authApi } from '../services/authApi';
 
+const PREMIUM_ENABLED = import.meta.env.VITE_ENABLE_PREMIUM === 'true';
+
 interface AuthContextType {
   user: User | null;
   loading: boolean;
@@ -71,7 +73,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const isAdmin = user?.role === 'ADMIN';
-  const isPremium = user ? checkPremium(user.role) : false;
+  const isPremium = user !== null && (!PREMIUM_ENABLED || checkPremium(user.role));
 
   return (
     <AuthContext.Provider value={{ user, loading, login, signup, googleAuth, logout, deleteAccount, refreshUser, isAdmin, isPremium }}>

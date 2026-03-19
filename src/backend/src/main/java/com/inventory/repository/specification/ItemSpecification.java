@@ -43,7 +43,11 @@ public class ItemSpecification {
                 if (hasText(criteria.search())) {
                     String escaped = SpecificationUtils.escapeLikePattern(criteria.search().toLowerCase());
                     String pattern = "%" + escaped + "%";
-                    predicates.add(cb.like(cb.lower(root.get("name")), pattern, SpecificationUtils.LIKE_ESCAPE_CHAR.charAt(0)));
+                    char esc = SpecificationUtils.LIKE_ESCAPE_CHAR.charAt(0);
+                    List<Predicate> searchPredicates = new ArrayList<>();
+                    searchPredicates.add(cb.like(cb.lower(root.get("name")), pattern, esc));
+                    searchPredicates.add(cb.like(cb.lower(root.get("barcode")), pattern, esc));
+                    predicates.add(cb.or(searchPredicates.toArray(new Predicate[0])));
                 }
 
                 if (criteria.itemListId() != null) {
