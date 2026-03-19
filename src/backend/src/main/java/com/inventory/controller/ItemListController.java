@@ -8,6 +8,7 @@ import com.inventory.model.ItemList;
 import com.inventory.service.IItemListService;
 import com.inventory.service.ImageStorageService;
 import jakarta.validation.Valid;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -24,6 +25,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Set;
 import java.util.UUID;
 
+@Validated
 @RestController
 @RequestMapping("/api/v1/lists")
 public class ItemListController {
@@ -44,7 +46,8 @@ public class ItemListController {
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "createdAt") String sortBy,
             @RequestParam(defaultValue = "desc") String sortDir,
-            @RequestParam(required = false) UUID workspaceId
+            @RequestParam(required = false) UUID workspaceId,
+            @RequestParam(required = false) @jakarta.validation.constraints.Size(max = 255) String search
     ) {
         size = Math.min(Math.max(size, 1), 100);
         if (!ALLOWED_SORT_FIELDS.contains(sortBy)) {
@@ -55,7 +58,7 @@ public class ItemListController {
                 : Sort.by(sortBy).descending();
         Pageable pageable = PageRequest.of(page, size, sort);
 
-        Page<ItemList> listsPage = itemListService.getAllLists(pageable, workspaceId);
+        Page<ItemList> listsPage = itemListService.getAllLists(pageable, workspaceId, search);
         Page<ItemListResponse> responsePage = listsPage.map(ItemListResponse::fromEntityWithoutItems);
 
         return ResponseEntity.ok(PageResponse.from(responsePage));

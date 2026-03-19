@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -11,12 +11,14 @@ import {
   BarChart3,
   Settings,
   Crown,
+  Search,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import FocusTrap from 'focus-trap-react';
 import { UserMenu } from './UserMenu';
 import { WorkspaceSwitcher } from './WorkspaceSwitcher';
 import { InvitationBanner } from './InvitationBanner';
+import { GlobalSearch, SearchTrigger } from './GlobalSearch';
 import { useAuth } from '../contexts/AuthContext';
 import { cn } from '@/lib/utils';
 
@@ -46,10 +48,25 @@ export default function Layout({ children }: LayoutProps) {
   const location = useLocation();
   const { isAdmin, isPremium, user } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+
+  const openSearch = useCallback(() => setSearchOpen(true), []);
 
   useEffect(() => {
     setSidebarOpen(false);
   }, [location.pathname]);
+
+  // Cmd+K / Ctrl+K shortcut
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setSearchOpen(true);
+      }
+    }
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   useEffect(() => {
     if (!sidebarOpen) return;
@@ -95,9 +112,16 @@ export default function Layout({ children }: LayoutProps) {
         <div className="w-6 h-6 bg-brand rounded-md flex items-center justify-center">
           <Package className="h-3.5 w-3.5 text-white" />
         </div>
-        <span className="font-display text-lg font-bold tracking-tight">
+        <span className="font-display text-lg font-bold tracking-tight flex-1">
           Shelfio
         </span>
+        <button
+          onClick={openSearch}
+          aria-label="Rechercher"
+          className="p-2 -mr-2 text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <Search className="h-5 w-5" />
+        </button>
       </div>
 
       {/* Backdrop overlay (mobile) */}
@@ -204,7 +228,12 @@ export default function Layout({ children }: LayoutProps) {
         </aside>
       </FocusTrap>
 
+      <GlobalSearch open={searchOpen} onOpenChange={setSearchOpen} />
+
       <div className="flex-1 flex flex-col">
+        <div className="sticky top-0 z-30 bg-background/95 backdrop-blur-sm border-b px-4 py-2.5 md:px-8 lg:px-10 hidden md:block">
+          <SearchTrigger onClick={openSearch} />
+        </div>
         <main className="flex-1 p-4 md:p-8 lg:px-10">
           <InvitationBanner />
           {children}

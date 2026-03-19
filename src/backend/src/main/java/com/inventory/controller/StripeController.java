@@ -31,12 +31,15 @@ public class StripeController {
     private final IStripeService stripeService;
     private final UserRepository userRepository;
     private final ApiRateLimiter checkoutRateLimiter;
+    private final boolean premiumEnabled;
 
     public StripeController(IStripeService stripeService, UserRepository userRepository,
-                            @Qualifier("checkoutRateLimiter") ApiRateLimiter checkoutRateLimiter) {
+                            @Qualifier("checkoutRateLimiter") ApiRateLimiter checkoutRateLimiter,
+                            @org.springframework.beans.factory.annotation.Value("${app.premium.enabled:true}") boolean premiumEnabled) {
         this.stripeService = stripeService;
         this.userRepository = userRepository;
         this.checkoutRateLimiter = checkoutRateLimiter;
+        this.premiumEnabled = premiumEnabled;
     }
 
     @PostMapping("/checkout")
@@ -44,6 +47,10 @@ public class StripeController {
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @Valid @RequestBody CheckoutRequest request
     ) {
+        if (!premiumEnabled) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(Map.of("error", "Premium feature is currently unavailable"));
+        }
         if (!checkoutRateLimiter.tryAcquire("checkout:user:" + userDetails.getId()).allowed()) {
             throw new RateLimitExceededException("Too many checkout requests. Please try again later.");
         }

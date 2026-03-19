@@ -82,7 +82,7 @@ class ItemListControllerTest {
         @DisplayName("should return paginated lists with default parameters")
         void getAllLists_defaultParams_returnsPageResponse() throws Exception {
             Pageable expectedPageable = PageRequest.of(0, 10, Sort.by("createdAt").descending());
-            when(itemListService.getAllLists(expectedPageable, null))
+            when(itemListService.getAllLists(expectedPageable, null, null))
                     .thenReturn(new PageImpl<>(List.of(testList), expectedPageable, 1));
 
             mockMvc.perform(get("/api/v1/lists")
@@ -104,7 +104,7 @@ class ItemListControllerTest {
         @DisplayName("should support custom pagination and sorting parameters")
         void getAllLists_customParams_passesCorrectPageable() throws Exception {
             Pageable expectedPageable = PageRequest.of(1, 5, Sort.by("name").ascending());
-            when(itemListService.getAllLists(expectedPageable, null))
+            when(itemListService.getAllLists(expectedPageable, null, null))
                     .thenReturn(new PageImpl<>(List.of(), expectedPageable, 0));
 
             mockMvc.perform(get("/api/v1/lists")
@@ -123,7 +123,7 @@ class ItemListControllerTest {
         @DisplayName("should fall back to createdAt when sort field is not allowed")
         void getAllLists_invalidSortField_fallsBackToCreatedAt() throws Exception {
             Pageable expectedPageable = PageRequest.of(0, 10, Sort.by("createdAt").descending());
-            when(itemListService.getAllLists(expectedPageable, null))
+            when(itemListService.getAllLists(expectedPageable, null, null))
                     .thenReturn(new PageImpl<>(List.of(), expectedPageable, 0));
 
             mockMvc.perform(get("/api/v1/lists")
@@ -131,14 +131,14 @@ class ItemListControllerTest {
                             .with(user(userDetails)))
                     .andExpect(status().isOk());
 
-            verify(itemListService).getAllLists(expectedPageable, null);
+            verify(itemListService).getAllLists(expectedPageable, null, null);
         }
 
         @Test
         @DisplayName("should clamp size to minimum of 1 when size is 0 or negative")
         void getAllLists_sizeTooSmall_clampsToOne() throws Exception {
             Pageable expectedPageable = PageRequest.of(0, 1, Sort.by("createdAt").descending());
-            when(itemListService.getAllLists(expectedPageable, null))
+            when(itemListService.getAllLists(expectedPageable, null, null))
                     .thenReturn(new PageImpl<>(List.of(), expectedPageable, 0));
 
             mockMvc.perform(get("/api/v1/lists")
@@ -146,14 +146,14 @@ class ItemListControllerTest {
                             .with(user(userDetails)))
                     .andExpect(status().isOk());
 
-            verify(itemListService).getAllLists(expectedPageable, null);
+            verify(itemListService).getAllLists(expectedPageable, null, null);
         }
 
         @Test
         @DisplayName("should clamp size to maximum of 100 when size exceeds limit")
         void getAllLists_sizeTooLarge_clampsTo100() throws Exception {
             Pageable expectedPageable = PageRequest.of(0, 100, Sort.by("createdAt").descending());
-            when(itemListService.getAllLists(expectedPageable, null))
+            when(itemListService.getAllLists(expectedPageable, null, null))
                     .thenReturn(new PageImpl<>(List.of(), expectedPageable, 0));
 
             mockMvc.perform(get("/api/v1/lists")
@@ -161,14 +161,14 @@ class ItemListControllerTest {
                             .with(user(userDetails)))
                     .andExpect(status().isOk());
 
-            verify(itemListService).getAllLists(expectedPageable, null);
+            verify(itemListService).getAllLists(expectedPageable, null, null);
         }
 
         @Test
         @DisplayName("should return empty page when no lists exist")
         void getAllLists_noLists_returnsEmptyPage() throws Exception {
             Pageable expectedPageable = PageRequest.of(0, 10, Sort.by("createdAt").descending());
-            when(itemListService.getAllLists(expectedPageable, null))
+            when(itemListService.getAllLists(expectedPageable, null, null))
                     .thenReturn(new PageImpl<>(List.of(), expectedPageable, 0));
 
             mockMvc.perform(get("/api/v1/lists")
@@ -182,7 +182,7 @@ class ItemListControllerTest {
         @DisplayName("should support sorting by updatedAt ascending")
         void getAllLists_sortByUpdatedAtAsc_passesCorrectSort() throws Exception {
             Pageable expectedPageable = PageRequest.of(0, 10, Sort.by("updatedAt").ascending());
-            when(itemListService.getAllLists(expectedPageable, null))
+            when(itemListService.getAllLists(expectedPageable, null, null))
                     .thenReturn(new PageImpl<>(List.of(), expectedPageable, 0));
 
             mockMvc.perform(get("/api/v1/lists")
@@ -191,14 +191,41 @@ class ItemListControllerTest {
                             .with(user(userDetails)))
                     .andExpect(status().isOk());
 
-            verify(itemListService).getAllLists(expectedPageable, null);
+            verify(itemListService).getAllLists(expectedPageable, null, null);
+        }
+
+        @Test
+        @DisplayName("should forward search parameter to service")
+        void getAllLists_withSearch_forwardsToService() throws Exception {
+            Pageable expectedPageable = PageRequest.of(0, 10, Sort.by("createdAt").descending());
+            when(itemListService.getAllLists(expectedPageable, null, "electronics"))
+                    .thenReturn(new PageImpl<>(List.of(testList), expectedPageable, 1));
+
+            mockMvc.perform(get("/api/v1/lists")
+                            .param("search", "electronics")
+                            .with(user(userDetails)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.data.content[0].name").value("Test List"));
+
+            verify(itemListService).getAllLists(expectedPageable, null, "electronics");
+        }
+
+        @Test
+        @DisplayName("should return 400 when search exceeds 255 characters")
+        void getAllLists_searchTooLong_returns400() throws Exception {
+            String longSearch = "a".repeat(256);
+
+            mockMvc.perform(get("/api/v1/lists")
+                            .param("search", longSearch)
+                            .with(user(userDetails)))
+                    .andExpect(status().isBadRequest());
         }
 
         @Test
         @DisplayName("should support sorting by category")
         void getAllLists_sortByCategory_passesCorrectSort() throws Exception {
             Pageable expectedPageable = PageRequest.of(0, 10, Sort.by("category").descending());
-            when(itemListService.getAllLists(expectedPageable, null))
+            when(itemListService.getAllLists(expectedPageable, null, null))
                     .thenReturn(new PageImpl<>(List.of(), expectedPageable, 0));
 
             mockMvc.perform(get("/api/v1/lists")
@@ -206,7 +233,7 @@ class ItemListControllerTest {
                             .with(user(userDetails)))
                     .andExpect(status().isOk());
 
-            verify(itemListService).getAllLists(expectedPageable, null);
+            verify(itemListService).getAllLists(expectedPageable, null, null);
         }
     }
 

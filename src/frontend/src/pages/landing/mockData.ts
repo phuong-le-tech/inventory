@@ -45,6 +45,21 @@ export const MOCK_RECENT_ITEMS = [
   },
 ];
 
+export const MOCK_STATUS_CHART = [
+  { name: "Disponible", count: 680, fill: "#22c55e" },
+  { name: "À vérifier", count: 23, fill: "#f59e0b" },
+  { name: "Maintenance", count: 3, fill: "#6366f1" },
+  { name: "Endommagé", count: 2, fill: "#ef4444" },
+];
+
+export const MOCK_CATEGORY_DATA = [
+  { name: "Électronique", count: 234, color: "#ef4444" },
+  { name: "Fournitures", count: 189, color: "#22c55e" },
+  { name: "Mobilier", count: 76, color: "#3b82f6" },
+  { name: "Stockage", count: 52, color: "#f59e0b" },
+  { name: "Réseau", count: 41, color: "#8b5cf6" },
+];
+
 export const MOCK_LIST_CARDS = [
   {
     name: "Électronique",

@@ -17,6 +17,7 @@ import com.inventory.model.User;
 import com.inventory.model.Workspace;
 import com.inventory.model.WorkspaceMember;
 import com.inventory.repository.ItemListRepository;
+import com.inventory.repository.specification.ItemListSpecification;
 import com.inventory.repository.ItemRepository;
 import com.inventory.repository.UserRepository;
 import com.inventory.repository.WorkspaceRepository;
@@ -24,8 +25,8 @@ import com.inventory.security.SecurityUtils;
 import com.inventory.security.WorkspaceAccessUtils;
 import com.inventory.service.CustomFieldValidator;
 import com.inventory.service.IItemListService;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.lang.NonNull;
@@ -41,7 +42,6 @@ import java.util.UUID;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class ItemListServiceImpl implements IItemListService {
 
     private static final int MAX_EXPORT_ITEMS = 10_000;
@@ -53,6 +53,25 @@ public class ItemListServiceImpl implements IItemListService {
     private final SecurityUtils securityUtils;
     private final WorkspaceAccessUtils workspaceAccessUtils;
     private final CustomFieldValidator customFieldValidator;
+    private final boolean premiumEnabled;
+
+    public ItemListServiceImpl(ItemListRepository itemListRepository,
+                               ItemRepository itemRepository,
+                               UserRepository userRepository,
+                               WorkspaceRepository workspaceRepository,
+                               SecurityUtils securityUtils,
+                               WorkspaceAccessUtils workspaceAccessUtils,
+                               CustomFieldValidator customFieldValidator,
+                               @Value("${app.premium.enabled:true}") boolean premiumEnabled) {
+        this.itemListRepository = itemListRepository;
+        this.itemRepository = itemRepository;
+        this.userRepository = userRepository;
+        this.workspaceRepository = workspaceRepository;
+        this.securityUtils = securityUtils;
+        this.workspaceAccessUtils = workspaceAccessUtils;
+        this.customFieldValidator = customFieldValidator;
+        this.premiumEnabled = premiumEnabled;
+    }
 
     private @NonNull UUID requireCurrentUserId() {
         return securityUtils.getCurrentUserId()
@@ -61,22 +80,37 @@ public class ItemListServiceImpl implements IItemListService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<ItemList> getAllLists(@NonNull Pageable pageable, UUID workspaceId) {
+    public Page<ItemList> getAllLists(@NonNull Pageable pageable, UUID workspaceId, String search) {
         if (securityUtils.isAdmin()) {
             if (workspaceId != null) {
-                return itemListRepository.findByWorkspaceId(workspaceId, pageable);
+                return itemListRepository.findAll(
+                        ItemListSpecification.withCriteria(search, null, null, List.of(workspaceId)),
+                        pageable);
             }
-            return itemListRepository.findAll(pageable);
+            return itemListRepository.findAll(
+                    ItemListSpecification.withCriteria(search, null, null, null),
+                    pageable);
         }
 
         if (workspaceId == null) {
-            // Fallback: return lists from all accessible workspaces via user_id
-            return itemListRepository.findByUserId(requireCurrentUserId(), pageable);
+            // Search across all accessible workspaces
+            List<UUID> workspaceIds = workspaceAccessUtils.getAccessibleWorkspaceIds();
+            if (!workspaceIds.isEmpty()) {
+                return itemListRepository.findAll(
+                        ItemListSpecification.withCriteria(search, null, null, workspaceIds),
+                        pageable);
+            }
+            UUID userId = requireCurrentUserId();
+            return itemListRepository.findAll(
+                    ItemListSpecification.withCriteria(search, null, userId, null),
+                    pageable);
         }
 
         // Verify membership
         workspaceAccessUtils.requireMembership(workspaceId);
-        return itemListRepository.findByWorkspaceId(workspaceId, pageable);
+        return itemListRepository.findAll(
+                ItemListSpecification.withCriteria(search, null, null, List.of(workspaceId)),
+                pageable);
     }
 
     @Override
@@ -120,7 +154,7 @@ public class ItemListServiceImpl implements IItemListService {
         }
 
         // Free-tier limit: count ALL lists owned by the user (across all workspaces)
-        if (user.getRole() == Role.USER) {
+        if (premiumEnabled && user.getRole() == Role.USER) {
             long count = itemListRepository.countByUserId(userId);
             if (count >= 5) {
                 throw new ListLimitExceededException(

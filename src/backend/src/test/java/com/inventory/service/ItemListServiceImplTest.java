@@ -28,7 +28,6 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
@@ -45,6 +44,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -72,7 +72,6 @@ class ItemListServiceImplTest {
     @Mock
     private CustomFieldValidator customFieldValidator;
 
-    @InjectMocks
     private ItemListServiceImpl itemListService;
 
     private User testUser;
@@ -84,6 +83,11 @@ class ItemListServiceImplTest {
 
     @BeforeEach
     void setUp() {
+        itemListService = new ItemListServiceImpl(
+                itemListRepository, itemRepository, userRepository,
+                workspaceRepository, securityUtils, workspaceAccessUtils,
+                customFieldValidator, true);
+
         testUserId = UUID.randomUUID();
         testListId = UUID.randomUUID();
         testWorkspaceId = UUID.randomUUID();
@@ -110,32 +114,68 @@ class ItemListServiceImplTest {
 
         @Test
         @DisplayName("admin should see all lists")
+        @SuppressWarnings("unchecked")
         void admin_seesAllLists() {
             Pageable pageable = PageRequest.of(0, 10);
             Page<ItemList> expected = new PageImpl<>(List.of(testList));
             when(securityUtils.isAdmin()).thenReturn(true);
-            when(itemListRepository.findAll(pageable)).thenReturn(expected);
+            when(itemListRepository.findAll(any(org.springframework.data.jpa.domain.Specification.class), eq(pageable)))
+                    .thenReturn(expected);
 
-            Page<ItemList> result = itemListService.getAllLists(pageable, null);
+            Page<ItemList> result = itemListService.getAllLists(pageable, null, null);
 
             assertThat(result.getContent()).hasSize(1);
-            verify(itemListRepository).findAll(pageable);
-            verify(itemListRepository, never()).findByUserId(any(), any());
+            verify(itemListRepository).findAll(any(org.springframework.data.jpa.domain.Specification.class), eq(pageable));
         }
 
         @Test
         @DisplayName("regular user should see only their lists when no workspaceId provided")
+        @SuppressWarnings("unchecked")
         void user_seesOwnLists() {
             Pageable pageable = PageRequest.of(0, 10);
             Page<ItemList> expected = new PageImpl<>(List.of(testList));
             when(securityUtils.isAdmin()).thenReturn(false);
-            when(securityUtils.getCurrentUserId()).thenReturn(Optional.of(testUserId));
-            when(itemListRepository.findByUserId(testUserId, pageable)).thenReturn(expected);
+            when(workspaceAccessUtils.getAccessibleWorkspaceIds()).thenReturn(List.of(testWorkspaceId));
+            when(itemListRepository.findAll(any(org.springframework.data.jpa.domain.Specification.class), eq(pageable)))
+                    .thenReturn(expected);
 
-            Page<ItemList> result = itemListService.getAllLists(pageable, null);
+            Page<ItemList> result = itemListService.getAllLists(pageable, null, null);
 
             assertThat(result.getContent()).hasSize(1);
-            verify(itemListRepository).findByUserId(testUserId, pageable);
+            verify(itemListRepository).findAll(any(org.springframework.data.jpa.domain.Specification.class), eq(pageable));
+        }
+
+        @Test
+        @DisplayName("user with no workspaces should fall back to ownerId-based query")
+        @SuppressWarnings("unchecked")
+        void user_noWorkspaces_fallsBackToOwnerId() {
+            Pageable pageable = PageRequest.of(0, 10);
+            Page<ItemList> expected = new PageImpl<>(List.of(testList));
+            when(securityUtils.isAdmin()).thenReturn(false);
+            when(securityUtils.getCurrentUserId()).thenReturn(Optional.of(testUserId));
+            when(workspaceAccessUtils.getAccessibleWorkspaceIds()).thenReturn(List.of());
+            when(itemListRepository.findAll(any(org.springframework.data.jpa.domain.Specification.class), eq(pageable)))
+                    .thenReturn(expected);
+
+            Page<ItemList> result = itemListService.getAllLists(pageable, null, null);
+
+            assertThat(result.getContent()).hasSize(1);
+        }
+
+        @Test
+        @DisplayName("user should see filtered lists when search is provided")
+        @SuppressWarnings("unchecked")
+        void user_withSearch_filtersResults() {
+            Pageable pageable = PageRequest.of(0, 10);
+            Page<ItemList> expected = new PageImpl<>(List.of(testList));
+            when(securityUtils.isAdmin()).thenReturn(false);
+            when(workspaceAccessUtils.getAccessibleWorkspaceIds()).thenReturn(List.of(testWorkspaceId));
+            when(itemListRepository.findAll(any(org.springframework.data.jpa.domain.Specification.class), eq(pageable)))
+                    .thenReturn(expected);
+
+            Page<ItemList> result = itemListService.getAllLists(pageable, null, "electronics");
+
+            assertThat(result.getContent()).hasSize(1);
         }
 
         @Test
@@ -145,7 +185,7 @@ class ItemListServiceImplTest {
             when(securityUtils.isAdmin()).thenReturn(false);
             when(securityUtils.getCurrentUserId()).thenReturn(Optional.empty());
 
-            assertThatThrownBy(() -> itemListService.getAllLists(pageable, null))
+            assertThatThrownBy(() -> itemListService.getAllLists(pageable, null, null))
                     .isInstanceOf(UnauthorizedException.class);
         }
     }
@@ -272,6 +312,31 @@ class ItemListServiceImplTest {
 
             assertThat(result.getName()).isEqualTo("Fourth List");
             verify(itemListRepository).save(any(ItemList.class));
+        }
+
+        @Test
+        @DisplayName("free user should bypass list limit when premium is disabled")
+        void freeUser_noLimitWhenPremiumDisabled() {
+            ItemListServiceImpl serviceWithPremiumDisabled = new ItemListServiceImpl(
+                    itemListRepository, itemRepository, userRepository,
+                    workspaceRepository, securityUtils, workspaceAccessUtils,
+                    customFieldValidator, false);
+
+            testUser.setRole(Role.USER);
+            ItemListRequest request = new ItemListRequest("Sixth List", null, null, null, null);
+            when(securityUtils.getCurrentUserId()).thenReturn(Optional.of(testUserId));
+            when(userRepository.findByIdWithLock(testUserId)).thenReturn(Optional.of(testUser));
+            when(workspaceRepository.findByOwnerIdAndIsDefaultTrue(testUserId)).thenReturn(Optional.of(testWorkspace));
+            when(itemListRepository.save(any(ItemList.class))).thenAnswer(invocation -> {
+                ItemList saved = invocation.getArgument(0);
+                saved.setId(UUID.randomUUID());
+                return saved;
+            });
+
+            ItemList result = serviceWithPremiumDisabled.createList(request);
+
+            assertThat(result.getName()).isEqualTo("Sixth List");
+            verify(itemListRepository, never()).countByUserId(any());
         }
 
         @Test
